@@ -10,3 +10,9 @@ node_modules/
 dist/
 .claude/
 Pasted text*
+
+# Biela Enterprise — required excludes (managed by platform, do not remove)
+build/
+.next/
+.env
+.env.local
