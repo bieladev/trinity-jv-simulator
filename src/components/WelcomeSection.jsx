@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -25,7 +25,6 @@ import {
   ChevronRightOutlined as ChevronRightIcon,
   TuneOutlined as TuneOutlinedIcon,
 } from '@mui/icons-material';
-import { features } from '../utils/data/features';
 import { 
   scenarioPresets, 
   comingSoonScenarios, 
@@ -33,11 +32,16 @@ import {
   additionalScenarios, 
 } from '../utils/data/scenarios';
 import { calculateMetrics, PARTNER_LOAN_CAPITAL_NOTE } from '../utils/calculations';
-import { motion } from '../utils/motion';
+import { motion, scrollToId } from '../utils/motion';
 import TrinityModelExplainer from './TrinityModelExplainer';
 import PageHeader from './common/PageHeader';
 import SectionHeading from './common/SectionHeading';
 import Reveal from './common/Reveal';
+import HeroValueVisual from './overview/HeroValueVisual';
+import ProgramFlow from './overview/ProgramFlow';
+import ToolPurpose from './overview/ToolPurpose';
+import HowToUse from './overview/HowToUse';
+import ReadingResults from './overview/ReadingResults';
 
 const formatCurrency = (value) => {
   if (isNaN(value)) return '$0';
@@ -52,7 +56,6 @@ const formatCurrency = (value) => {
 function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
   const [showBenchmarks, setShowBenchmarks] = useState(false);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
-  const presetsRef = useRef(null);
 
   const benchmarkData = useMemo(() => {
     const allScenarios = [];
@@ -91,9 +94,7 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
     setShowBenchmarks(!showBenchmarks);
   };
 
-  const scrollToPresets = () => {
-    presetsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const scrollToPresets = () => scrollToId('presets');
 
   const loadPreset = (scenario) => onLoadScenario(scenarioPresets[scenario.id].data, scenario.title, scenario.id);
 
@@ -149,7 +150,8 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
           size="hero"
           eyebrow="Trinity joint venture model"
           title="Model the return for every party in the Trinity JV"
-          description="Choose a preset or set your own assumptions to see each party's capital, appreciation share and annualized return through to exit."
+          description="Set the assumptions for one home and see what the homeowner, DR Horton and Berkshire each put in, take out and earn a year, from purchase to exit."
+          aside={<HeroValueVisual />}
           actions={
             <>
               <Button variant="contained" size="large" onClick={onSkipToAssumptions} data-testid="hero-custom-button">
@@ -162,42 +164,14 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
           }
         />
 
-        <Box
-          component="ul"
-          sx={{
-            listStyle: 'none',
-            m: 0,
-            p: 0,
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-            borderTop: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          {features.map((feature, index) => (
-            <Reveal
-              component="li"
-              index={index}
-              key={feature.title}
-              sx={{
-                py: 3,
-                pr: { md: 3 },
-                borderStyle: 'solid',
-                borderWidth: { xs: '0 0 1px 0', sm: index < 2 ? '0 0 1px 0' : 0, md: index === 0 ? 0 : '0 0 0 1px' },
-                pl: { sm: index % 2 === 1 ? 3 : 0, md: index === 0 ? 0 : 3 },
-                borderColor: 'divider',
-              }}
-            >
-              <Box sx={{ color: 'brand.primaryText', display: 'flex', mb: 1.5, '& svg': { fontSize: 22 } }} aria-hidden>
-                {feature.icon}
-              </Box>
-              <Typography variant="subtitle2" component="h2">{feature.title}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{feature.description}</Typography>
-            </Reveal>
-          ))}
-        </Box>
+      </Container>
 
-        <Box ref={presetsRef} component="section" aria-labelledby="starting-point-title" sx={{ pt: 7, scrollMarginTop: 80 }}>
+      <ProgramFlow />
+      <ToolPurpose />
+      <HowToUse onSkipToAssumptions={onSkipToAssumptions} onBrowsePresets={scrollToPresets} />
+
+      <Container>
+        <Box id="presets" component="section" aria-labelledby="starting-point-title" sx={{ pt: 7, scrollMarginTop: 80 }}>
           <SectionHeading
             eyebrow="Step 1"
             title={<span id="starting-point-title">Choose your starting point</span>}
@@ -217,7 +191,7 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
                 <TuneOutlinedIcon sx={{ color: 'brand.primaryText', fontSize: 24, mb: 2 }} aria-hidden />
                 <Typography variant="h4" component="h3">Custom simulation</Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-                  Define every assumption to model a specific deal: home price, cost split, financing, appreciation and how it is shared.
+                  Define every assumption to model a specific deal: home price, land and builder costs, financing, appreciation and how it is shared.
                 </Typography>
                 <Button variant="outlined" fullWidth onClick={onSkipToAssumptions} endIcon={<ChevronRightIcon />}>
                   Set assumptions
@@ -298,6 +272,7 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
         </Reveal>
       </Container>
 
+      <ReadingResults />
       <TrinityModelExplainer />
     </Box>
   );

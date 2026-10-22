@@ -15,12 +15,12 @@ import {
   DarkModeOutlined as DarkModeOutlinedIcon,
   LightModeOutlined as LightModeOutlinedIcon,
   RestartAltOutlined as RestartAltOutlinedIcon,
+  MenuBookOutlined as MenuBookOutlinedIcon,
 } from '@mui/icons-material';
 
-// Brand kit logos: the colour wordmark is drawn for light surfaces, the white
-// monochrome version for dark ones.
+// No logo by request: the header shows the product name as text only.
 
-function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onReset, colorMode = 'light', onToggleColorMode }) {
+function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onOpenGuide, onReset, colorMode = 'light', onToggleColorMode }) {
   const theme = useTheme();
   const isDark = colorMode === 'dark';
 
@@ -109,6 +109,19 @@ function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onRe
           </Box>
 
           <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} sx={{ flexShrink: 0 }}>
+            {onOpenGuide && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={onOpenGuide}
+                startIcon={<MenuBookOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
+                data-testid="guide-link"
+                aria-label="Guide: how the program works"
+                sx={{ color: 'text.secondary', minWidth: 0, '&:hover': { color: 'text.primary' }, '& .MuiButton-startIcon': { display: { xs: 'none', sm: 'inherit' } } }}
+              >
+                Guide
+              </Button>
+            )}
             {currentView !== 'welcome' && (
               <Button variant="outlined" size="small" onClick={onNavigateHome} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
                 Start over

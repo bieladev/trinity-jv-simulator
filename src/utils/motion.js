@@ -15,6 +15,7 @@ export const motion = {
     countFast: 240, // live slider / input value labels
     count: 800, // big-number count-up
     chart: 800, // Recharts draw-in
+    draw: 900, // connector / progress lines and the hero value curve drawing in
   },
   easing: {
     // Decelerating curve for everything that enters or settles.
@@ -26,6 +27,7 @@ export const motion = {
     chart: 'ease-out', // Recharts accepts named easings only
   },
   stagger: 60, // ms between siblings in a grid or list
+  sequence: 200, // ms between steps of a sequence (program phases, how-to steps)
   staggerMaxSteps: 6, // later siblings share the last delay
   distance: { rise: 8, reveal: 12, screen: 12, lift: 2, press: 1 }, // px
   // Reveal as soon as any pixel is on screen: nothing visible stays hidden.
@@ -86,6 +88,16 @@ export function observeOnce(el, callback, rootMargin = '0px') {
     shared.io.unobserve(el);
   };
 }
+
+// Smooth-scrolls to an element by id (instant with reduced motion). The
+// target's scroll-margin-top keeps it clear of the sticky header.
+export const scrollToId = (id) => {
+  if (typeof document === 'undefined') return false;
+  const el = document.getElementById(id);
+  if (!el) return false;
+  el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  return true;
+};
 
 export const isInViewport = (el) => {
   if (!el || typeof window === 'undefined') return false;
@@ -166,6 +178,9 @@ export const motionGlobalStyles = (shadows) => {
     '@keyframes motionReveal': { from: { opacity: 0, translate: `0 ${x.reveal}px` }, to: { opacity: 1, translate: '0 0' } },
     '@keyframes motionFade': { from: { opacity: 0 }, to: { opacity: 1 } },
     '@keyframes motionRule': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
+    '@keyframes motionDrawX': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
+    '@keyframes motionDrawY': { from: { transform: 'scaleY(0)' }, to: { transform: 'scaleY(1)' } },
+    '@keyframes motionUncover': { from: { transform: 'scaleX(1)' }, to: { transform: 'scaleX(0)' } },
 
     // Screen change (Overview → Assumptions → Summary/Results). Fill mode
     // "backwards" so no transform lingers after the animation.
@@ -180,6 +195,32 @@ export const motionGlobalStyles = (shadows) => {
     '[data-reveal="pending"]': { opacity: 0 },
     '[data-reveal="rise"]': { animation: `motionRise ${d.reveal}ms ${e.out} backwards`, ...delayed },
     '[data-reveal="in"]': { animation: `motionReveal ${d.reveal}ms ${e.out} backwards`, ...delayed },
+
+    // Lines that draw in (transform only). `.motion-now` plays on first
+    // paint (above the fold); with data-reveal (Reveal / useReveal) the line
+    // draws once the shared observer sees it. Delay: --motion-delay.
+    '.motion-draw-x': { transformOrigin: 'left center' },
+    '.motion-draw-y': { transformOrigin: 'center top' },
+    '.motion-draw-x.motion-now, .motion-draw-x[data-reveal="in"], .motion-draw-x[data-reveal="rise"]': {
+      animation: `motionDrawX ${d.draw}ms ${e.out} backwards`, ...delayed,
+    },
+    '.motion-draw-y.motion-now, .motion-draw-y[data-reveal="in"], .motion-draw-y[data-reveal="rise"]': {
+      animation: `motionDrawY ${d.draw}ms ${e.out} backwards`, ...delayed,
+    },
+    // Curtain over a plot that slides away to the right, so the curve reads
+    // as drawing left to right. At rest it is scaled to nothing.
+    '.motion-uncover': {
+      transformOrigin: 'right center',
+      transform: 'scaleX(0)',
+      animation: `motionUncover ${d.draw}ms ${e.inOut} backwards`,
+      ...delayed,
+    },
+    // Same curtain below the fold: covers the plot until the observer sees it.
+    '.motion-uncover-io': { transformOrigin: 'right center', transform: 'scaleX(0)' },
+    '.motion-uncover-io[data-reveal="pending"]': { opacity: 1, transform: 'scaleX(1)' },
+    '.motion-uncover-io[data-reveal="in"], .motion-uncover-io[data-reveal="rise"]': {
+      animation: `motionUncover ${d.draw}ms ${e.inOut} backwards`, ...delayed,
+    },
 
     // Hover lift for cards (pointer devices only). Doubled class beats the
     // component's own transition declaration.
@@ -201,7 +242,8 @@ export const motionGlobalStyles = (shadows) => {
     },
 
     '@media print': {
-      '[data-reveal]': { opacity: '1 !important', animation: 'none !important' },
+      '[data-reveal], .motion-now': { opacity: '1 !important', animation: 'none !important' },
+      '.motion-uncover, .motion-uncover-io': { display: 'none' },
     },
     '@media (prefers-reduced-motion: reduce)': {
       '*, *::before, *::after': {
@@ -211,6 +253,7 @@ export const motionGlobalStyles = (shadows) => {
         scrollBehavior: 'auto !important',
       },
       '[data-reveal="pending"]': { opacity: 1 },
+      '.motion-uncover-io[data-reveal="pending"]': { transform: 'scaleX(0)' },
       '.motion-lift.motion-lift:hover': { transform: 'none' },
     },
   };

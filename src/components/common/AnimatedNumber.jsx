@@ -22,7 +22,9 @@ const roundTo = (n, d) => {
 // it is on screen, otherwise when it first scrolls into view (until then it
 // shows the final value, so off-screen reads, print and PDF are correct).
 // With reduced motion it always shows the final value.
-function AnimatedNumber({ value, format = String, duration = motion.duration.count, from = 0, animateOnMount = true, className, ...rest }) {
+// `delay` (ms, mount count only) holds the start value for that long first,
+// so a number can wait for the element around it to finish its entrance.
+function AnimatedNumber({ value, format = String, duration = motion.duration.count, from = 0, delay = 0, animateOnMount = true, className, ...rest }) {
   const target = Number(value);
   const finalText = format(value);
   const [frameText, setFrameText] = useState(null); // null = at rest
@@ -33,9 +35,13 @@ function AnimatedNumber({ value, format = String, duration = motion.duration.cou
   const formatRef = useRef(format);
   formatRef.current = format;
 
+  const delayRef = useRef(0);
+
   const stop = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = 0;
+    if (delayRef.current) clearTimeout(delayRef.current);
+    delayRef.current = 0;
   };
 
   const run = (start, end, ms) => {
@@ -70,11 +76,24 @@ function AnimatedNumber({ value, format = String, duration = motion.duration.cou
   useLayoutEffect(() => {
     const el = ref.current;
     if (!animateOnMount || !el || prefersReducedMotion() || !Number.isFinite(target)) return undefined;
+    const start = () => {
+      if (!(delay > 0)) {
+        run(from, prevTargetRef.current, duration);
+        return;
+      }
+      stop();
+      shownRef.current = from;
+      setFrameText(formatRef.current(roundTo(from, Math.min(2, countDecimals(prevTargetRef.current)))));
+      delayRef.current = setTimeout(() => {
+        delayRef.current = 0;
+        run(from, prevTargetRef.current, duration);
+      }, delay);
+    };
     if (isInViewport(el)) {
-      run(from, prevTargetRef.current, duration);
+      start();
       return stop;
     }
-    const unobserve = observeOnce(el, () => run(from, prevTargetRef.current, duration));
+    const unobserve = observeOnce(el, start);
     return () => {
       unobserve();
       stop();

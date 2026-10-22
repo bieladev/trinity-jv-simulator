@@ -12,7 +12,7 @@ import ChartsPanel from './components/ChartsPanel';
 import ScenarioComparison from './components/ScenarioComparison';
 import { scenarioPresets } from './utils/data/scenarios';
 import { loadState, saveState, clearState, DEFAULT_STATE } from './utils/persistence';
-import { useReducedMotion } from './utils/motion';
+import { useReducedMotion, scrollToId, motion } from './utils/motion';
 
 // Thin wrapper that only forwards `theme`. MUI's ThemeProvider rejects any
 // extra prop in development, and the preview tooling tags JSX elements with a
@@ -143,6 +143,30 @@ function App() {
     handleNavigateHome();
   };
 
+  // Header "Guide": back to the overview (inputs and results are kept) and
+  // down to "How the program works". From another screen the overview
+  // mounts first, then the scroll runs once its entrance has settled.
+  const [pendingSection, setPendingSection] = useState(null);
+  const handleOpenGuide = () => {
+    if (currentView === 'welcome') {
+      scrollToId('how-it-works');
+      return;
+    }
+    setCurrentView('welcome');
+    setPendingSection('how-it-works');
+    scrollToRef();
+  };
+  useEffect(() => {
+    if (!pendingSection || currentView !== 'welcome') return undefined;
+    // Wait for the incoming screen's rise to settle so the target position
+    // is measured without the transition's offset.
+    const timer = setTimeout(() => {
+      scrollToId(pendingSection);
+      setPendingSection(null);
+    }, reducedMotion ? 0 : motion.duration.screen);
+    return () => clearTimeout(timer);
+  }, [pendingSection, currentView, reducedMotion]);
+
   const handleNavigateToInput = () => {
     setCurrentView('input');
     scrollToRef(inputPanelRef);
@@ -215,12 +239,13 @@ function App() {
           currentView={currentView}
           onNavigateHome={handleNavigateHome}
           onNavigateToInput={handleNavigateToInput}
+          onOpenGuide={handleOpenGuide}
           onReset={handleReset}
           colorMode={colorMode}
           onToggleColorMode={handleToggleColorMode}
         />
         <Box component="main" sx={{ flex: 1, pb: currentView === 'welcome' ? 0 : { xs: 7, md: 10 } }}>
-          <div key={currentView} className={screenAnimatedRef.current ? 'motion-screen' : undefined}>
+          <div key={currentView} className={screenAnimatedRef.current && !reducedMotion ? 'motion-screen' : undefined}>
             {renderContent()}
           </div>
         </Box>
