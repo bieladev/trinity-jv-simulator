@@ -14,6 +14,13 @@ import { scenarioPresets } from './utils/data/scenarios';
 import { loadState, saveState, clearState, DEFAULT_STATE } from './utils/persistence';
 import { useReducedMotion } from './utils/motion';
 
+// Thin wrapper that only forwards `theme`. MUI's ThemeProvider rejects any
+// extra prop in development, and the preview tooling tags JSX elements with a
+// data attribute, so the provider itself is created without JSX.
+function AppThemeProvider({ theme, children }) {
+  return React.createElement(ThemeProvider, { theme }, children);
+}
+
 function App() {
   // Colour mode: stored choice, else the OS preference (followed live until
   // the user picks one explicitly).
@@ -201,7 +208,7 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
+    <AppThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflowX: 'clip' }}>
         <HeaderNavigation 
@@ -225,7 +232,7 @@ function App() {
           </Container>
         </Box>
       </Box>
-    </ThemeProvider>
+    </AppThemeProvider>
   );
 }
 
