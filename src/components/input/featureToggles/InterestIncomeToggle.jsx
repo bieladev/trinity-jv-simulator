@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import { SliderLabel } from '../../common/FormSection';
 
+const formatPercent = (v) => `${v}%`;
+
 function InterestIncomeToggle({ formData, handleSwitchChange, setFormData }) {
   return (
     <Card sx={{ p: { xs: 2, md: 2.5 }, boxShadow: 'none', bgcolor: formData.enableInterestIncome ? 'background.paper' : 'brand.surfaceMuted', transition: 'background-color 150ms ease-out' }}>
@@ -39,7 +41,7 @@ function InterestIncomeToggle({ formData, handleSwitchChange, setFormData }) {
         <Box mt={3} pt={3} sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
           <Grid container spacing={4}>
             <Grid item xs={12} sm={6}>
-              <SliderLabel id="brk-interest-label" label="Berkshire interest share" value={`${formData.interestSplitBerkshire}%`} />
+              <SliderLabel id="brk-interest-label" label="Berkshire interest share" value={formData.interestSplitBerkshire} format={formatPercent} />
               <Slider
                 aria-labelledby="brk-interest-label"
                 value={formData.interestSplitBerkshire}
@@ -61,7 +63,7 @@ function InterestIncomeToggle({ formData, handleSwitchChange, setFormData }) {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <SliderLabel id="drh-interest-label" label="DR Horton interest share" value={`${formData.interestSplitDrHorton}%`} />
+              <SliderLabel id="drh-interest-label" label="DR Horton interest share" value={formData.interestSplitDrHorton} format={formatPercent} />
               <Slider
                 aria-labelledby="drh-interest-label"
                 value={formData.interestSplitDrHorton}

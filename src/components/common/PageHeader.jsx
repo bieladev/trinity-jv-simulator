@@ -1,9 +1,11 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { revealStyle } from '../../utils/motion';
 
 // The one page header used at the top of every view: eyebrow, title, a
 // single line of description and optional actions. Replaces the old
-// gradient banners.
+// gradient banners. Always above the fold, so its entrance is pure CSS
+// (motion-rise: a short staggered rise, opacity 1 from the first paint).
 function PageHeader({ eyebrow, title, description, actions, meta, component = 'h1', size = 'page' }) {
   const isHero = size === 'hero';
   return (
@@ -21,22 +23,22 @@ function PageHeader({ eyebrow, title, description, actions, meta, component = 'h
     >
       <Box sx={{ minWidth: 0, maxWidth: isHero ? 820 : 760 }}>
         {eyebrow && (
-          <Typography variant="overline" component="p" color="text.secondary" sx={{ mb: 1.5, display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 20, height: 2, mt: 'calc(0.8em - 1px)', bgcolor: 'brand.accent', flexShrink: 0 } }}>
+          <Typography variant="overline" component="p" color="text.secondary" className="motion-rise motion-rule" style={revealStyle(0)} sx={{ mb: 1.5, display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 20, height: 2, mt: 'calc(0.8em - 1px)', bgcolor: 'brand.accent', flexShrink: 0 } }}>
             {eyebrow}
           </Typography>
         )}
-        <Typography variant={isHero ? 'h1' : 'h2'} component={component} sx={{ textWrap: 'balance' }}>
+        <Typography variant={isHero ? 'h1' : 'h2'} component={component} className="motion-rise" style={revealStyle(1)} sx={{ textWrap: 'balance' }}>
           {title}
         </Typography>
         {description && (
-          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 2, maxWidth: 680, textWrap: 'pretty' }}>
+          <Typography variant="subtitle1" color="text.secondary" className="motion-rise" style={revealStyle(2)} sx={{ mt: 2, maxWidth: 680, textWrap: 'pretty' }}>
             {description}
           </Typography>
         )}
-        {meta && <Box sx={{ mt: 2.5 }}>{meta}</Box>}
+        {meta && <Box className="motion-rise" style={revealStyle(3)} sx={{ mt: 2.5 }}>{meta}</Box>}
       </Box>
       {actions && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, flexShrink: 0 }}>
+        <Box className="motion-rise" style={revealStyle(3)} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, flexShrink: 0 }}>
           {actions}
         </Box>
       )}

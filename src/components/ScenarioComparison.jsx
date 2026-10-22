@@ -44,6 +44,8 @@ import { calculateMetrics } from '../utils/calculations';
 import SectionHeading from './common/SectionHeading';
 import StakeholderLabel from './common/StakeholderLabel';
 import { useChartStyles, ChartTooltip, formatAxisCurrency, WrappedCategoryTick } from './charts/chartKit';
+import Reveal from './common/Reveal';
+import { motion, useReducedMotion, useEnterReplay, chartAnimation } from '../utils/motion';
 
 // The comparison list is owned by App (persisted to localStorage) as a list
 // of preset ids; names, data and metrics are derived here on every render so
@@ -52,6 +54,8 @@ function ScenarioComparison({ baseSimulationData, baseScenarioId, comparisonIds 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedScenarioId, setSelectedScenarioId] = useState('');
   const cs = useChartStyles();
+  const reduced = useReducedMotion();
+  const [replayRef, replayKey] = useEnterReplay();
 
   const availableScenarios = scenarioPresets;
   const comparisonScenarios = comparisonIds
@@ -154,96 +158,102 @@ function ScenarioComparison({ baseSimulationData, baseScenarioId, comparisonIds 
         }
       />
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 2, md: 3 }, mb: 3 }}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
-          <Typography variant="h5" component="h3">Total appreciation</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>Property value gained by exit, per scenario.</Typography>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={barMargin}>
-              <CartesianGrid {...cs.grid} />
-              <XAxis dataKey="name" {...cs.xAxis} interval={0} height={48} tick={<WrappedCategoryTick />} />
-              <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
-              <Tooltip content={<ChartTooltip labelFormatter={(l) => l} />} cursor={cs.barCursor} />
-              <Bar dataKey="appreciation" name="Total appreciation" fill={cs.palette.total} fillOpacity={0.75} radius={[4, 4, 0, 0]} maxBarSize={56} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Paper>
+      <Box ref={replayRef} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 2, md: 3 }, mb: 3 }}>
+        <Reveal index={0} sx={{ minWidth: 0 }}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, minWidth: 0, height: '100%' }}>
+            <Typography variant="h5" component="h3">Total appreciation</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>Property value gained by exit, per scenario.</Typography>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart key={replayKey} data={chartData} margin={barMargin}>
+                <CartesianGrid {...cs.grid} />
+                <XAxis dataKey="name" {...cs.xAxis} interval={0} height={48} tick={<WrappedCategoryTick />} />
+                <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
+                <Tooltip content={<ChartTooltip labelFormatter={(l) => l} />} cursor={cs.barCursor} />
+                <Bar dataKey="appreciation" name="Total appreciation" fill={cs.palette.total} fillOpacity={0.75} radius={[4, 4, 0, 0]} maxBarSize={56} {...chartAnimation(reduced)} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Reveal>
 
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
-          <Typography variant="h5" component="h3">Stakeholder returns</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>Homeowner equity and each partner's total return at exit.</Typography>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={barMargin} barGap={2}>
-              <CartesianGrid {...cs.grid} />
-              <XAxis dataKey="name" {...cs.xAxis} interval={0} height={48} tick={<WrappedCategoryTick />} />
-              <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
-              <Tooltip content={<ChartTooltip labelFormatter={(l) => l} />} cursor={cs.barCursor} />
-              <Legend {...cs.legend} />
-              <Bar dataKey="homeowner" fill={cs.palette.homeowner} name="Homeowner" radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
-              <Bar dataKey="drHorton" fill={cs.palette.drHorton} name="DR Horton" radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
-              <Bar dataKey="berkshire" fill={cs.palette.berkshire} name="Berkshire" radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Paper>
+        <Reveal index={1} sx={{ minWidth: 0 }}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, minWidth: 0, height: '100%' }}>
+            <Typography variant="h5" component="h3">Stakeholder returns</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>Homeowner equity and each partner's total return at exit.</Typography>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart key={replayKey} data={chartData} margin={barMargin} barGap={2}>
+                <CartesianGrid {...cs.grid} />
+                <XAxis dataKey="name" {...cs.xAxis} interval={0} height={48} tick={<WrappedCategoryTick />} />
+                <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
+                <Tooltip content={<ChartTooltip labelFormatter={(l) => l} />} cursor={cs.barCursor} />
+                <Legend {...cs.legend} />
+                <Bar dataKey="homeowner" fill={cs.palette.homeowner} name="Homeowner" radius={[4, 4, 0, 0]} maxBarSize={28} {...chartAnimation(reduced)} />
+                <Bar dataKey="drHorton" fill={cs.palette.drHorton} name="DR Horton" radius={[4, 4, 0, 0]} maxBarSize={28} {...chartAnimation(reduced, motion.stagger)} />
+                <Bar dataKey="berkshire" fill={cs.palette.berkshire} name="Berkshire" radius={[4, 4, 0, 0]} maxBarSize={28} {...chartAnimation(reduced, 2 * motion.stagger)} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Reveal>
       </Box>
 
-      <Typography variant="h5" component="h3" sx={{ mb: 2 }}>Detailed comparison</Typography>
-      <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-        <TableContainer>
-          <Table size="small" sx={{ '& thead th': { whiteSpace: 'normal', verticalAlign: 'bottom', lineHeight: 1.4 }, '& tbody td': { whiteSpace: 'nowrap' } }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Scenario</TableCell>
-                <TableCell align="right">Home price</TableCell>
-                <TableCell align="right">Total appreciation</TableCell>
-                <TableCell align="right"><StakeholderLabel stakeholder="homeowner">Homeowner equity</StakeholderLabel></TableCell>
-                <TableCell align="right"><StakeholderLabel stakeholder="drHorton">DR Horton return</StakeholderLabel></TableCell>
-                <TableCell align="right"><StakeholderLabel stakeholder="berkshire">Berkshire return</StakeholderLabel></TableCell>
-                <TableCell align="right">Return multiple</TableCell>
-                <TableCell align="right">Exit year</TableCell>
-                <TableCell align="right" sx={{ position: 'relative' }}><Box component="span" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>Actions</Box></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow sx={{ bgcolor: 'brand.surfaceMuted' }}>
-                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    Current scenario
-                    <Chip label="Base" size="small" color="primary" />
-                  </Box>
-                </TableCell>
-                <TableCell align="right">{formatCurrency(baseSimulationData.homePurchasePrice)}</TableCell>
-                <TableCell align="right">{formatCurrency(baseMetrics.totalAppreciation)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(baseMetrics.homeownerEquity)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(baseMetrics.drHortonTotalReturn)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(baseMetrics.berkshireTotalReturn)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>{baseMetrics.returnMultiple.toFixed(1)}x</TableCell>
-                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Year {baseMetrics.effectiveSaleYear}</TableCell>
-                <TableCell align="right" sx={{ color: 'text.secondary' }}>—</TableCell>
-              </TableRow>
-              {comparisonScenarios.map((scenario) => (
-                <TableRow key={scenario.id} data-testid="compare-row">
-                  <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{scenario.name}</TableCell>
-                  <TableCell align="right">{formatCurrency(scenario.data.homePurchasePrice)}</TableCell>
-                  <TableCell align="right">{formatCurrency(scenario.metrics.totalAppreciation)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(scenario.metrics.homeownerEquity)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(scenario.metrics.drHortonTotalReturn)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(scenario.metrics.berkshireTotalReturn)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>{scenario.metrics.returnMultiple.toFixed(1)}x</TableCell>
-                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Year {scenario.metrics.effectiveSaleYear}</TableCell>
-                  <TableCell align="right">
-                    <MuiTooltip title={`Remove ${scenario.name}`}>
-                      <IconButton onClick={() => handleRemoveScenario(scenario.id)} size="small" aria-label={`Remove ${scenario.name}`} sx={{ '&:hover': { color: 'error.main' } }}>
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </MuiTooltip>
-                  </TableCell>
+      <Reveal>
+        <Typography variant="h5" component="h3" sx={{ mb: 2 }}>Detailed comparison</Typography>
+        <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+          <TableContainer>
+            <Table size="small" sx={{ '& thead th': { whiteSpace: 'normal', verticalAlign: 'bottom', lineHeight: 1.4 }, '& tbody td': { whiteSpace: 'nowrap' } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Scenario</TableCell>
+                  <TableCell align="right">Home price</TableCell>
+                  <TableCell align="right">Total appreciation</TableCell>
+                  <TableCell align="right"><StakeholderLabel stakeholder="homeowner">Homeowner equity</StakeholderLabel></TableCell>
+                  <TableCell align="right"><StakeholderLabel stakeholder="drHorton">DR Horton return</StakeholderLabel></TableCell>
+                  <TableCell align="right"><StakeholderLabel stakeholder="berkshire">Berkshire return</StakeholderLabel></TableCell>
+                  <TableCell align="right">Return multiple</TableCell>
+                  <TableCell align="right">Exit year</TableCell>
+                  <TableCell align="right" sx={{ position: 'relative' }}><Box component="span" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>Actions</Box></TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                <TableRow sx={{ bgcolor: 'brand.surfaceMuted' }}>
+                  <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      Current scenario
+                      <Chip label="Base" size="small" color="primary" />
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right">{formatCurrency(baseSimulationData.homePurchasePrice)}</TableCell>
+                  <TableCell align="right">{formatCurrency(baseMetrics.totalAppreciation)}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(baseMetrics.homeownerEquity)}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(baseMetrics.drHortonTotalReturn)}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(baseMetrics.berkshireTotalReturn)}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>{baseMetrics.returnMultiple.toFixed(1)}x</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Year {baseMetrics.effectiveSaleYear}</TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary' }}>—</TableCell>
+                </TableRow>
+                {comparisonScenarios.map((scenario) => (
+                  <TableRow key={scenario.id} data-testid="compare-row">
+                    <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{scenario.name}</TableCell>
+                    <TableCell align="right">{formatCurrency(scenario.data.homePurchasePrice)}</TableCell>
+                    <TableCell align="right">{formatCurrency(scenario.metrics.totalAppreciation)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(scenario.metrics.homeownerEquity)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(scenario.metrics.drHortonTotalReturn)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(scenario.metrics.berkshireTotalReturn)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{scenario.metrics.returnMultiple.toFixed(1)}x</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Year {scenario.metrics.effectiveSaleYear}</TableCell>
+                    <TableCell align="right">
+                      <MuiTooltip title={`Remove ${scenario.name}`}>
+                        <IconButton onClick={() => handleRemoveScenario(scenario.id)} size="small" aria-label={`Remove ${scenario.name}`} sx={{ '&:hover': { color: 'error.main' } }}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </MuiTooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Reveal>
       {comparisonScenarios.length === 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
           No presets added yet. Use Add scenario to compare up to two.

@@ -33,9 +33,11 @@ import {
   additionalScenarios, 
 } from '../utils/data/scenarios';
 import { calculateMetrics, PARTNER_LOAN_CAPITAL_NOTE } from '../utils/calculations';
+import { motion } from '../utils/motion';
 import TrinityModelExplainer from './TrinityModelExplainer';
 import PageHeader from './common/PageHeader';
 import SectionHeading from './common/SectionHeading';
+import Reveal from './common/Reveal';
 
 const formatCurrency = (value) => {
   if (isNaN(value)) return '$0';
@@ -101,8 +103,8 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
         {label}
       </Typography>
       <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, borderTop: '1px solid', borderColor: 'divider' }}>
-        {list.map((scenario) => (
-          <Box component="li" key={scenario.id} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+        {list.map((scenario, index) => (
+          <Reveal component="li" index={index} key={scenario.id} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
             <ButtonBase
               onClick={() => loadPreset(scenario)}
               data-testid={`preset-${scenario.id}`}
@@ -114,10 +116,12 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
                 gap: 2,
                 py: 1.75,
                 borderRadius: '2px',
-                '& .preset-title': { transition: 'color 150ms ease-out' },
-                '& .preset-chevron': { transition: 'transform 150ms ease-out, color 150ms ease-out' },
+                '& .preset-title': { transition: `color ${motion.duration.fast}ms ${motion.easing.out}` },
+                '& .preset-chevron': { transition: `transform ${motion.duration.fast}ms ${motion.easing.out}, color ${motion.duration.fast}ms ${motion.easing.out}` },
                 '&:hover .preset-title': { color: 'brand.primaryText' },
                 '&:hover .preset-chevron': { transform: 'translateX(3px)', color: 'brand.primaryText' },
+                // Press: the chevron pushes a little further.
+                '&:active .preset-chevron': { transform: 'translateX(5px)' },
               }}
             >
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -130,7 +134,7 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
               </Box>
               <ChevronRightIcon className="preset-chevron" sx={{ color: 'text.secondary', flexShrink: 0 }} aria-hidden />
             </ButtonBase>
-          </Box>
+          </Reveal>
         ))}
       </Box>
     </Box>
@@ -171,8 +175,9 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
           }}
         >
           {features.map((feature, index) => (
-            <Box
+            <Reveal
               component="li"
+              index={index}
               key={feature.title}
               sx={{
                 py: 3,
@@ -188,7 +193,7 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
               </Box>
               <Typography variant="subtitle2" component="h2">{feature.title}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{feature.description}</Typography>
-            </Box>
+            </Reveal>
           ))}
         </Box>
 
@@ -207,20 +212,22 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
               </Box>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: { xs: 2.5, md: 4 }, bgcolor: 'brand.surfaceMuted', position: { md: 'sticky' }, top: { md: 96 } }}>
-              <TuneOutlinedIcon sx={{ color: 'brand.primaryText', fontSize: 24, mb: 2 }} aria-hidden />
-              <Typography variant="h4" component="h3">Custom simulation</Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-                Define every assumption to model a specific deal: home price, cost split, financing, appreciation and how it is shared.
-              </Typography>
-              <Button variant="outlined" fullWidth onClick={onSkipToAssumptions} endIcon={<ChevronRightIcon />}>
-                Set assumptions
-              </Button>
-            </Paper>
+            <Reveal index={1} sx={{ position: { md: 'sticky' }, top: { md: 96 } }}>
+              <Paper variant="outlined" className="motion-lift" sx={{ p: { xs: 2.5, md: 4 }, bgcolor: 'brand.surfaceMuted' }}>
+                <TuneOutlinedIcon sx={{ color: 'brand.primaryText', fontSize: 24, mb: 2 }} aria-hidden />
+                <Typography variant="h4" component="h3">Custom simulation</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
+                  Define every assumption to model a specific deal: home price, cost split, financing, appreciation and how it is shared.
+                </Typography>
+                <Button variant="outlined" fullWidth onClick={onSkipToAssumptions} endIcon={<ChevronRightIcon />}>
+                  Set assumptions
+                </Button>
+              </Paper>
+            </Reveal>
           </Box>
         </Box>
 
-        <Box component="section" sx={{ pt: 7 }}>
+        <Reveal component="section" sx={{ pt: 7 }}>
           <Accordion expanded={showBenchmarks} onChange={handleToggleBenchmarks} TransitionProps={{ unmountOnExit: true }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="benchmarks-content" id="benchmarks-header">
               <Box>
@@ -288,7 +295,7 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
               </Box>
             </AccordionDetails>
           </Accordion>
-        </Box>
+        </Reveal>
       </Container>
 
       <TrinityModelExplainer />

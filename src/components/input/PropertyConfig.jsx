@@ -9,6 +9,8 @@ import {
 } from '@mui/material';
 import FormSection, { SliderLabel } from '../common/FormSection';
 
+const formatPercent = (v) => `${v}%`;
+
 function PropertyConfig({ formData, handleInputChange, handleSliderChange }) {
   return (
     <FormSection id="section-property" index="01" title="Property" description="Purchase price and how it divides between land and the builder's costs.">
@@ -29,7 +31,7 @@ function PropertyConfig({ formData, handleInputChange, handleSliderChange }) {
         </Grid>
         
         <Grid item xs={12}>
-          <SliderLabel id="land-value-label" label="Land value, % of home" value={`${formData.landValuePercent}%`} />
+          <SliderLabel id="land-value-label" label="Land value, % of home" value={formData.landValuePercent} format={formatPercent} />
           <Slider
             aria-labelledby="land-value-label"
             value={formData.landValuePercent}
@@ -43,7 +45,7 @@ function PropertyConfig({ formData, handleInputChange, handleSliderChange }) {
         </Grid>
 
         <Grid item xs={12}>
-          <SliderLabel id="builder-costs-label" label="Total builder costs, % of home" value={`${formData.totalBuilderCostsPercent}%`} />
+          <SliderLabel id="builder-costs-label" label="Total builder costs, % of home" value={formData.totalBuilderCostsPercent} format={formatPercent} />
           <Slider
             aria-labelledby="builder-costs-label"
             value={formData.totalBuilderCostsPercent}

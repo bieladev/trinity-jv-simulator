@@ -1,4 +1,5 @@
 import { createTheme, alpha } from '@mui/material/styles';
+import { motion, motionGlobalStyles } from './utils/motion';
 
 // Lotline brand tokens (memory/branding/profile.md). Every colour in the app
 // comes from here — components read them through the MUI theme, never as hex.
@@ -75,9 +76,13 @@ const buildShadows = (ink, mode) => {
   return ['none', sm, md, md, md, md, md, md, ...Array(17).fill(lg)];
 };
 
-export const createAppTheme = (mode = 'light') => {
+export const createAppTheme = (mode = 'light', { reducedMotion = false } = {}) => {
   const t = tokens[mode] || tokens.light;
   const [c1, c2, c3, c4] = t.chart;
+  const { duration: md, easing: me, distance: mx } = motion;
+  // Transition string from motion tokens; 'none' when the user asks for
+  // reduced motion.
+  const tr = (...parts) => (reducedMotion ? 'none' : parts.map(([prop, ms, ease = me.out]) => `${prop} ${ms}ms ${ease}`).join(', '));
 
   const base = createTheme({
     palette: {
@@ -119,6 +124,14 @@ export const createAppTheme = (mode = 'light') => {
     },
     shape: { borderRadius: 4 },
     shadows: buildShadows(t.shadowInk, mode),
+    // MUI's own transitions (menus, dialogs, switches, accordions) use the
+    // motion tokens too, and switch off entirely for reduced motion.
+    transitions: reducedMotion
+      ? { create: () => 'none' }
+      : {
+          easing: { easeOut: me.out, easeInOut: me.inOut, sharp: me.inOut },
+          duration: { shortest: md.fast, shorter: md.base, short: md.medium, standard: md.collapse, complex: md.reveal, enteringScreen: md.medium, leavingScreen: md.base },
+        },
     typography: {
       fontFamily: BODY_FONT,
       htmlFontSize: 16,
@@ -154,6 +167,7 @@ export const createAppTheme = (mode = 'light') => {
     components: {
       MuiCssBaseline: {
         styleOverrides: {
+          ...motionGlobalStyles(base.shadows),
           html: { colorScheme: mode, WebkitTextSizeAdjust: '100%' },
           body: { backgroundColor: t.background, overflowX: 'hidden' },
           '::selection': { backgroundColor: alpha(t.primary, 0.25) },
@@ -186,14 +200,19 @@ export const createAppTheme = (mode = 'light') => {
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
-          root: { borderRadius: 4, minHeight: 36, paddingLeft: 14, paddingRight: 14, transition: 'background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out' },
+          root: {
+            borderRadius: 4, minHeight: 36, paddingLeft: 14, paddingRight: 14,
+            transition: tr(['background-color', md.fast], ['border-color', md.fast], ['color', md.fast], ['box-shadow', md.fast], ['transform', md.press]),
+            // Press: the button travels 1px into the surface.
+            '&:active': { transform: reducedMotion ? 'none' : `translateY(${mx.press}px)` },
+          },
           sizeLarge: { minHeight: 44, paddingLeft: 20, paddingRight: 20, fontSize: '1rem' },
           sizeSmall: { minHeight: 32, paddingLeft: 10, paddingRight: 10, fontSize: '0.875rem' },
           containedPrimary: {
             backgroundColor: t.primary,
             color: '#ffffff',
-            '&:hover': { backgroundColor: t.primaryHover },
-            '&:active': { backgroundColor: t.primaryPressed },
+            '&:hover': { backgroundColor: t.primaryHover, boxShadow: base.shadows[1] },
+            '&:active': { backgroundColor: t.primaryPressed, boxShadow: 'none' },
           },
           outlined: {
             borderColor: t.border,
@@ -209,7 +228,14 @@ export const createAppTheme = (mode = 'light') => {
         },
       },
       MuiIconButton: {
-        styleOverrides: { root: { borderRadius: 4, color: t.textMuted, '&:hover': { color: t.text, backgroundColor: alpha(t.text, 0.06) } } },
+        styleOverrides: {
+          root: {
+            borderRadius: 4, color: t.textMuted,
+            transition: tr(['background-color', md.fast], ['color', md.fast], ['transform', md.press]),
+            '&:hover': { color: t.text, backgroundColor: alpha(t.text, 0.06) },
+            '&:active': { transform: reducedMotion ? 'none' : `translateY(${mx.press}px)` },
+          },
+        },
       },
       MuiChip: {
         styleOverrides: {
@@ -227,7 +253,8 @@ export const createAppTheme = (mode = 'light') => {
       MuiTabs: {
         styleOverrides: {
           root: { minHeight: 44, borderBottom: hairline },
-          indicator: { height: 2, backgroundColor: t.primaryText },
+          // The indicator slides between tabs.
+          indicator: { height: 2, backgroundColor: t.primaryText, transition: tr(['left', md.medium], ['width', md.medium]) },
           flexContainer: { gap: 24 },
         },
       },
@@ -235,6 +262,7 @@ export const createAppTheme = (mode = 'light') => {
         styleOverrides: {
           root: {
             minHeight: 44, minWidth: 0, padding: '10px 0', textTransform: 'none', fontWeight: 600, fontSize: '0.9375rem', color: t.textMuted,
+            transition: tr(['color', md.fast]),
             '&.Mui-selected': { color: t.text },
             '&:hover': { color: t.text },
           },
@@ -247,6 +275,7 @@ export const createAppTheme = (mode = 'light') => {
         styleOverrides: {
           root: {
             textTransform: 'none', fontWeight: 600, fontSize: '0.9375rem', color: t.textMuted, borderColor: t.border, borderRadius: 4, padding: '8px 14px', lineHeight: 1.3,
+            transition: tr(['background-color', md.fast], ['color', md.fast]),
             '&.Mui-selected': { color: t.text, backgroundColor: alpha(t.primaryText, 0.12), '&:hover': { backgroundColor: alpha(t.primaryText, 0.18) } },
           },
         },
@@ -256,7 +285,12 @@ export const createAppTheme = (mode = 'light') => {
           // Inset so the first and last mark labels stay inside the field column.
           root: { color: t.primaryText, height: 4, padding: '14px 0', width: 'calc(100% - 24px)', marginLeft: 12, marginRight: 12 },
           rail: { backgroundColor: t.border, opacity: 1 },
-          thumb: { width: 16, height: 16, backgroundColor: t.surface, border: `2px solid ${t.primaryText}`, boxShadow: base.shadows[1], '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 6px ${alpha(t.primaryText, 0.16)}` } },
+          thumb: {
+            width: 16, height: 16, backgroundColor: t.surface, border: `2px solid ${t.primaryText}`, boxShadow: base.shadows[1],
+            transition: tr(['box-shadow', md.fast], ['transform', md.fast], ['left', md.fast], ['bottom', md.fast]),
+            '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 6px ${alpha(t.primaryText, 0.16)}` },
+            '&.Mui-active': { transform: reducedMotion ? 'translate(-50%, -50%)' : 'translate(-50%, -50%) scale(1.15)' },
+          },
           mark: { backgroundColor: t.borderStrong, width: 2, height: 2, borderRadius: 1 },
           markActive: { backgroundColor: t.surface },
           markLabel: { fontSize: '0.8125rem', color: t.textMuted, fontVariantNumeric: 'tabular-nums' },
@@ -315,7 +349,14 @@ export const createAppTheme = (mode = 'light') => {
         styleOverrides: {
           root: { padding: 0, minHeight: 56, '&:hover .MuiTypography-root': { color: t.primaryText } },
           content: { margin: '16px 0', paddingRight: 16 },
-          expandIconWrapper: { color: t.textMuted },
+          // Chevron rotates on open/close.
+          expandIconWrapper: { color: t.textMuted, transition: tr(['transform', md.base], ['color', md.fast]) },
+        },
+      },
+      MuiCollapse: {
+        defaultProps: {
+          timeout: reducedMotion ? 0 : md.collapse,
+          easing: { enter: me.out, exit: me.inOut },
         },
       },
       MuiAccordionDetails: {

@@ -20,16 +20,23 @@ import { calculateMetrics, generateYearlySeries, ANNUALIZED_RETURN_HELP, HOMEOWN
 import PageHeader from './common/PageHeader';
 import SectionHeading from './common/SectionHeading';
 import StakeholderLabel from './common/StakeholderLabel';
+import AnimatedNumber from './common/AnimatedNumber';
+import Reveal from './common/Reveal';
+import { motion, useReveal, revealStyle, useReducedMotion, useEnterReplay, chartAnimation } from '../utils/motion';
 
 // Tiny trend line for a stakeholder tile. Decorative: the figures beside it
 // carry the information, so it is hidden from assistive technology.
-function Sparkline({ data, dataKey, color }) {
+// Draws in left to right, a beat after its tile, and replays when a tile
+// below the fold (stacked tiles on mobile) scrolls into view.
+function Sparkline({ data, dataKey, color, index = 0 }) {
+  const reduced = useReducedMotion();
+  const [replayRef, replayKey] = useEnterReplay();
   return (
-    <Box aria-hidden sx={{ height: 44 }}>
+    <Box ref={replayRef} aria-hidden sx={{ height: 44 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 4, right: 2, bottom: 2, left: 2 }}>
+        <AreaChart key={replayKey} data={data} margin={{ top: 4, right: 2, bottom: 2, left: 2 }}>
           <YAxis hide domain={['dataMin', 'dataMax']} />
-          <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={color} fillOpacity={0.12} isAnimationActive={false} dot={false} />
+          <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={color} fillOpacity={0.12} dot={false} {...chartAnimation(reduced, motion.duration.medium + index * motion.stagger)} />
         </AreaChart>
       </ResponsiveContainer>
     </Box>
@@ -77,9 +84,9 @@ function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) 
     : `Appreciation share by year, ${sparkCaptionYears}`;
 
   const outcomes = [
-    { label: 'Final home value', value: formatCurrency(metrics.futureValue), sub: `At year ${exitYear}` },
-    { label: 'Total appreciation', value: formatCurrency(metrics.totalAppreciation), sub: `Over ${exitYear} years` },
-    { label: 'Homeowner equity', value: formatCurrency(metrics.homeownerEquity), sub: `Return multiple ${metrics.returnMultiple.toFixed(1)}x` },
+    { label: 'Final home value', value: metrics.futureValue, sub: `At year ${exitYear}` },
+    { label: 'Total appreciation', value: metrics.totalAppreciation, sub: `Over ${exitYear} years` },
+    { label: 'Homeowner equity', value: metrics.homeownerEquity, sub: `Return multiple ${metrics.returnMultiple.toFixed(1)}x` },
   ];
 
   const dealTerms = [
@@ -186,14 +193,14 @@ function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) 
           }
         />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 2, md: 3 } }}>
-          {stakeholders.map((s) => (
-            <StakeholderTile key={s.key} stakeholder={s} yearlyData={yearlyData} formatCurrency={formatCurrency} formatPercentage={formatPercentage} />
+          {stakeholders.map((s, i) => (
+            <StakeholderTile key={s.key} index={i} stakeholder={s} yearlyData={yearlyData} formatCurrency={formatCurrency} formatPercentage={formatPercentage} />
           ))}
         </Box>
       </Box>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' }, gap: { xs: 2, md: 3 }, mt: 7, alignItems: 'stretch' }}>
-        <Box component="section" aria-labelledby="key-outcomes-title" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Reveal index={0} component="section" aria-labelledby="key-outcomes-title" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Typography variant="h4" component="h2" id="key-outcomes-title" sx={{ mb: 2 }}>Key outcomes</Typography>
           <Paper variant="outlined" sx={{ flex: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', lg: '1fr' }, alignContent: 'stretch' }}>
             {outcomes.map((o, i) => (
@@ -209,14 +216,16 @@ function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) 
                 }}
               >
                 <Typography variant="overline" component="p" color="text.secondary">{o.label}</Typography>
-                <Typography variant="metricSm" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>{o.value}</Typography>
+                <Typography variant="metricSm" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
+                  <AnimatedNumber value={o.value} format={formatCurrency} />
+                </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{o.sub}</Typography>
               </Box>
             ))}
           </Paper>
-        </Box>
+        </Reveal>
 
-        <Box component="section" aria-labelledby="deal-structure-title" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Reveal index={1} component="section" aria-labelledby="deal-structure-title" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Typography variant="h4" component="h2" id="deal-structure-title" sx={{ mb: 2 }}>Deal structure</Typography>
           <Paper variant="outlined" component="dl" sx={{ m: 0, flex: 1, px: { xs: 2.5, md: 3 }, py: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
             {dealTerms.map((row, i) => (
@@ -229,22 +238,23 @@ function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) 
               </Box>
             ))}
           </Paper>
-        </Box>
+        </Reveal>
       </Box>
     </Container>
   );
 }
 
 // "Big number + small delta" tile for one stakeholder.
-function StakeholderTile({ stakeholder: s, yearlyData, formatCurrency, formatPercentage }) {
+function StakeholderTile({ stakeholder: s, index, yearlyData, formatCurrency, formatPercentage }) {
   const theme = useTheme();
+  const revealRef = useReveal();
   const color = theme.palette.chart[s.key];
   const irr = Number(s.irr);
   const TrendIcon = irr > 0.05 ? NorthEastIcon : irr < -0.05 ? SouthEastIcon : EastIcon;
   const trendColor = irr > 0.05 ? 'success.main' : irr < -0.05 ? 'error.main' : 'text.secondary';
 
   return (
-    <Paper variant="outlined" component="article" aria-label={s.name} sx={{ p: { xs: 2.5, md: 3 }, height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <Paper ref={revealRef} style={revealStyle(index)} className="motion-lift" variant="outlined" component="article" aria-label={s.name} sx={{ p: { xs: 2.5, md: 3 }, height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mb: 2.5 }}>
         <Typography variant="subtitle2" component="h3">
           <StakeholderLabel stakeholder={s.key}>{s.name}</StakeholderLabel>
@@ -253,7 +263,9 @@ function StakeholderTile({ stakeholder: s, yearlyData, formatCurrency, formatPer
       </Box>
 
       <Typography variant="body2" color="text.secondary">{s.totalLabel}</Typography>
-      <Typography variant="metric" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>{formatCurrency(s.total)}</Typography>
+      <Typography variant="metric" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
+        <AnimatedNumber value={s.total} format={formatCurrency} />
+      </Typography>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
         <TrendIcon sx={{ fontSize: 18, color: trendColor }} aria-hidden />
@@ -271,7 +283,7 @@ function StakeholderTile({ stakeholder: s, yearlyData, formatCurrency, formatPer
       </Typography>
 
       <Box sx={{ mt: 2.5 }}>
-        <Sparkline data={yearlyData} dataKey={s.sparkKey} color={color} />
+        <Sparkline data={yearlyData} dataKey={s.sparkKey} color={color} index={index} />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{s.sparkCaption}</Typography>
       </Box>
 

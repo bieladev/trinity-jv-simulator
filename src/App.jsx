@@ -12,12 +12,14 @@ import ChartsPanel from './components/ChartsPanel';
 import ScenarioComparison from './components/ScenarioComparison';
 import { scenarioPresets } from './utils/data/scenarios';
 import { loadState, saveState, clearState, DEFAULT_STATE } from './utils/persistence';
+import { useReducedMotion } from './utils/motion';
 
 function App() {
   // Colour mode: stored choice, else the OS preference (followed live until
   // the user picks one explicitly).
   const [colorMode, setColorMode] = useState(getInitialColorMode);
-  const theme = useMemo(() => createAppTheme(colorMode), [colorMode]);
+  const reducedMotion = useReducedMotion();
+  const theme = useMemo(() => createAppTheme(colorMode, { reducedMotion }), [colorMode, reducedMotion]);
   useEffect(() => {
     document.documentElement.dataset.theme = colorMode;
     document.documentElement.style.backgroundColor = theme.palette.background.default;
@@ -65,15 +67,20 @@ function App() {
   const inputPanelRef = useRef(null);
   const resultsRef = useRef(null);
 
-  const scrollToRef = (ref) => {
-    setTimeout(() => {
-      if (ref?.current) {
-        ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }, 100);
+  // Every screen change starts at the top. The jump happens in the same task
+  // as the state change (before the next paint), so the incoming screen's
+  // fade-in plays from the top of the page instead of racing a smooth scroll.
+  const scrollToRef = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   };
+
+  // The first screen paints immediately; later screens fade + rise in.
+  const lastViewRef = useRef(currentView);
+  const screenAnimatedRef = useRef(false);
+  if (lastViewRef.current !== currentView) {
+    lastViewRef.current = currentView;
+    screenAnimatedRef.current = true;
+  }
 
   const handleLoadScenario = (data, name, id) => {
     setSelectedScenarioId(id);
@@ -206,7 +213,9 @@ function App() {
           onToggleColorMode={handleToggleColorMode}
         />
         <Box component="main" sx={{ flex: 1, pb: currentView === 'welcome' ? 0 : { xs: 7, md: 10 } }}>
-          {renderContent()}
+          <div key={currentView} className={screenAnimatedRef.current ? 'motion-screen' : undefined}>
+            {renderContent()}
+          </div>
         </Box>
         <Box component="footer" sx={{ borderTop: '1px solid', borderColor: 'divider', py: 4 }}>
           <Container>

@@ -10,6 +10,11 @@ import {
 import FormSection, { SliderLabel } from '../common/FormSection';
 import Note from '../common/Note';
 import { solveBalancedShares } from '../../utils/calculations';
+import AnimatedNumber from '../common/AnimatedNumber';
+import { motion } from '../../utils/motion';
+
+const formatPercent = (v) => `${v}%`;
+const formatShare = (v) => `${v.toFixed(1)}%`;
 
 function AppreciationShareConfig({ formData, handlePartnershipModeChange, handleAppreciationShareChange }) {
   const balance = formData.partnershipMode === 'balanced' ? solveBalancedShares(formData) : null;
@@ -47,7 +52,7 @@ function AppreciationShareConfig({ formData, handlePartnershipModeChange, handle
 
       <Grid container spacing={4}>
         <Grid item xs={12} md={6}>
-          <SliderLabel id="drh-share-label" label="DR Horton share" value={`${formData.drHortonAppreciationShare}%`} />
+          <SliderLabel id="drh-share-label" label="DR Horton share" value={formData.drHortonAppreciationShare} format={formatPercent} />
           <Slider
             aria-labelledby="drh-share-label"
             value={formData.drHortonAppreciationShare}
@@ -65,7 +70,7 @@ function AppreciationShareConfig({ formData, handlePartnershipModeChange, handle
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <SliderLabel id="brk-share-label" label="Berkshire share" value={`${formData.berkshireAppreciationShare}%`} />
+          <SliderLabel id="brk-share-label" label="Berkshire share" value={formData.berkshireAppreciationShare} format={formatPercent} />
           <Slider
             aria-labelledby="brk-share-label"
             value={formData.berkshireAppreciationShare}
@@ -86,7 +91,12 @@ function AppreciationShareConfig({ formData, handlePartnershipModeChange, handle
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body1" color="text.secondary">Homeowner share</Typography>
             <Typography variant="body1" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-              {(100 - formData.drHortonAppreciationShare - formData.berkshireAppreciationShare).toFixed(1)}%
+              <AnimatedNumber
+                value={100 - formData.drHortonAppreciationShare - formData.berkshireAppreciationShare}
+                format={formatShare}
+                duration={motion.duration.countFast}
+                animateOnMount={false}
+              />
             </Typography>
           </Box>
         </Grid>

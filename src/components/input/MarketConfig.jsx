@@ -9,6 +9,8 @@ import {
 } from '@mui/material';
 import FormSection, { SliderLabel } from '../common/FormSection';
 
+const formatYear = (v) => `Year ${v}`;
+
 function MarketConfig({ formData, handleInputChange, handleSliderChange }) {
   return (
     <FormSection id="section-market" index="03" title="Market and timeline" description="Expected appreciation and the year the position is exited.">
@@ -29,7 +31,7 @@ function MarketConfig({ formData, handleInputChange, handleSliderChange }) {
         </Grid>
 
         <Grid item xs={12}>
-          <SliderLabel id="sale-year-label" label="Sale year" value={`Year ${formData.saleYear}`} />
+          <SliderLabel id="sale-year-label" label="Sale year" value={formData.saleYear} format={formatYear} />
           <Slider
             aria-labelledby="sale-year-label"
             value={formData.saleYear}

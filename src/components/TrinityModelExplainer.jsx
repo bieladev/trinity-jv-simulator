@@ -14,6 +14,8 @@ import {
 } from '@mui/icons-material';
 import FaqSection from './explainer/FaqSection';
 import SectionHeading from './common/SectionHeading';
+import Reveal from './common/Reveal';
+import { motion } from '../utils/motion';
 
 function TrinityModelExplainer() {
   const [showFAQ, setShowFAQ] = useState(false);
@@ -51,18 +53,18 @@ function TrinityModelExplainer() {
 
         <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 2, md: 3 } }}>
           {explainerColumns.map((column, index) => (
-            <Box component="li" key={column.title} sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: { xs: 2.5, md: 3 } }}>
+            <Reveal component="li" index={index} key={column.title} className="motion-lift" sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: { xs: 2.5, md: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <Box sx={{ color: 'brand.primaryText', display: 'flex', '& svg': { fontSize: 22 } }} aria-hidden>{column.icon}</Box>
                 <Typography variant="overline" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>{String(index + 1).padStart(2, '0')}</Typography>
               </Box>
               <Typography variant="h5" component="h3" sx={{ mb: 1 }}>{column.title}</Typography>
               <Typography variant="body2" color="text.secondary">{column.description}</Typography>
-            </Box>
+            </Reveal>
           ))}
         </Box>
 
-        <Box sx={{ mt: 7, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '4fr 8fr' }, gap: { xs: 3, md: 6 }, alignItems: 'start' }}>
+        <Reveal sx={{ mt: 7, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '4fr 8fr' }, gap: { xs: 3, md: 6 }, alignItems: 'start' }}>
           <Box>
             <Typography variant="h3" component="h2">Frequently asked questions</Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
@@ -74,18 +76,18 @@ function TrinityModelExplainer() {
               data-testid="faq-toggle"
               aria-expanded={showFAQ}
               aria-controls="faq-list"
-              endIcon={<ExpandMoreIcon sx={{ transform: showFAQ ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease-out' }} />}
+              endIcon={<ExpandMoreIcon sx={{ transform: showFAQ ? 'rotate(180deg)' : 'none', transition: `transform ${motion.duration.base}ms ${motion.easing.out}` }} />}
             >
               {showFAQ ? 'Hide questions' : 'Show questions'}
             </Button>
           </Box>
-          <Collapse in={showFAQ} timeout={300} id="faq-list">
+          <Collapse in={showFAQ} id="faq-list">
             <FaqSection showTitle={false} />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
               Have a question we do not cover? Model the specific case in the simulator to see how each assumption changes the outcome for every party.
             </Typography>
           </Collapse>
-        </Box>
+        </Reveal>
       </Container>
     </Box>
   );

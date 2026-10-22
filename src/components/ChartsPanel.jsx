@@ -39,6 +39,7 @@ import {
   formatAxisCurrency,
   legendPayload,
 } from './charts/chartKit';
+import { useReducedMotion, useEnterReplay, chartAnimation } from '../utils/motion';
 
 function ChartCard({ title, subtitle, children, fill = false, ...rest }) {
   return (
@@ -55,6 +56,10 @@ function ChartsPanel({ simulationData, scenarioName, onNavigateToInput }) {
   const [chartView, setChartView] = useState('equity');
   const theme = useTheme();
   const cs = useChartStyles();
+  const reduced = useReducedMotion();
+  // Charts draw in on mount (tab switches remount them, so they redraw);
+  // below the fold they replay once the panel scrolls into view.
+  const [replayRef, replayKey] = useEnterReplay();
 
   if (!simulationData) {
     return (
@@ -89,6 +94,7 @@ function ChartsPanel({ simulationData, scenarioName, onNavigateToInput }) {
       stroke={cs.palette.marker}
       strokeDasharray="4 4"
       ifOverflow="extendDomain"
+      className="motion-chart-marker"
       label={<ExitMarkerLabel value={exitLabel} />}
     />
   );
@@ -140,105 +146,109 @@ function ChartsPanel({ simulationData, scenarioName, onNavigateToInput }) {
         <Tab value="cashflow" label="Loan balance" data-testid="chart-view-cashflow" />
       </Tabs>
 
-      {chartView === 'equity' && (
-        <ChartCard
-          data-testid="chart-equity"
-          title={`${exitYear}-year equity growth timeline`}
-          subtitle="Homeowner equity and each partner's appreciation share, stacked, against total home value."
-        >
-          <ResponsiveContainer width="100%" height={380}>
-            <ComposedChart data={yearlyData} margin={plotMargin}>
-              <CartesianGrid {...cs.grid} />
-              <XAxis {...yearAxisProps} {...cs.xAxis} />
-              <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
-              <Tooltip content={<ChartTooltip colors={{ homeownerEquity: cs.palette.homeowner, drHortonShare: cs.palette.drHorton, berkshireShare: cs.palette.berkshire }} />} cursor={cs.cursor} />
-              <Legend {...cs.legend} payload={equityLegend} />
-              <Area type="monotone" dataKey="homeownerEquity" stackId="1" stroke={surface} strokeWidth={1.5} fill={cs.palette.homeowner} fillOpacity={0.9} name="Homeowner equity" />
-              <Area type="monotone" dataKey="drHortonShare" stackId="1" stroke={surface} strokeWidth={1.5} fill={cs.palette.drHorton} fillOpacity={0.9} name={drHortonSeriesName} />
-              <Area type="monotone" dataKey="berkshireShare" stackId="1" stroke={surface} strokeWidth={1.5} fill={cs.palette.berkshire} fillOpacity={0.9} name={berkshireSeriesName} />
-              <Line type="monotone" dataKey="homeValue" stroke={cs.palette.total} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: surface, strokeWidth: 2 }} name="Total home value" />
-              {exitMarker}
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
-
-      {chartView === 'distribution' && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 2, md: 3 } }}>
-          <ChartCard
-            data-testid="chart-return-share"
-            title="Share of total returns at exit"
-            subtitle="Homeowner equity and each partner's total return, as a share of the three combined."
-          >
-            {pieInvalid ? (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center', fontStyle: 'italic' }}>
-                Shares aren&apos;t meaningful when a party&apos;s return is negative — see the bar chart.
-              </Typography>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie data={stakeholderData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="58%" outerRadius="88%" paddingAngle={1} stroke={surface} strokeWidth={2} isAnimationActive={false}>
-                    {stakeholderData.map((entry) => (<Cell key={entry.key} fill={entry.color} />))}
-                  </Pie>
-                  <Tooltip content={<ChartTooltip labelFormatter={(l, payload) => payload?.[0]?.name || ''} />} />
-                </PieChart>
+      <Box ref={replayRef}>
+        <Box key={`${chartView}-${replayKey}`} className="motion-fade">
+          {chartView === 'equity' && (
+            <ChartCard
+              data-testid="chart-equity"
+              title={`${exitYear}-year equity growth timeline`}
+              subtitle="Homeowner equity and each partner's appreciation share, stacked, against total home value."
+            >
+              <ResponsiveContainer width="100%" height={380}>
+                <ComposedChart data={yearlyData} margin={plotMargin}>
+                  <CartesianGrid {...cs.grid} />
+                  <XAxis {...yearAxisProps} {...cs.xAxis} />
+                  <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
+                  <Tooltip content={<ChartTooltip colors={{ homeownerEquity: cs.palette.homeowner, drHortonShare: cs.palette.drHorton, berkshireShare: cs.palette.berkshire }} />} cursor={cs.cursor} />
+                  <Legend {...cs.legend} payload={equityLegend} />
+                  <Area type="monotone" dataKey="homeownerEquity" stackId="1" stroke={surface} strokeWidth={1.5} fill={cs.palette.homeowner} fillOpacity={0.9} name="Homeowner equity" {...chartAnimation(reduced)} />
+                  <Area type="monotone" dataKey="drHortonShare" stackId="1" stroke={surface} strokeWidth={1.5} fill={cs.palette.drHorton} fillOpacity={0.9} name={drHortonSeriesName} {...chartAnimation(reduced)} />
+                  <Area type="monotone" dataKey="berkshireShare" stackId="1" stroke={surface} strokeWidth={1.5} fill={cs.palette.berkshire} fillOpacity={0.9} name={berkshireSeriesName} {...chartAnimation(reduced)} />
+                  <Line type="monotone" dataKey="homeValue" stroke={cs.palette.total} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: surface, strokeWidth: 2 }} name="Total home value" {...chartAnimation(reduced)} />
+                  {exitMarker}
+                </ComposedChart>
               </ResponsiveContainer>
-            )}
-            <Box component="ul" sx={{ listStyle: 'none', m: 0, mt: 2, p: 0 }}>
-              {stakeholderData.map((d) => (
-                <Box component="li" key={d.key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ width: 10, height: 10, borderRadius: '2px', bgcolor: d.color, flexShrink: 0 }} aria-hidden />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{d.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{d.share.toFixed(1)}% appreciation share</Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                      {pieInvalid ? '—' : (stakeholderSum ? `${((d.value / stakeholderSum) * 100).toFixed(0)}%` : '—')}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(d.value)}</Typography>
-                  </Box>
+            </ChartCard>
+          )}
+
+          {chartView === 'distribution' && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 2, md: 3 } }}>
+              <ChartCard
+                data-testid="chart-return-share"
+                title="Share of total returns at exit"
+                subtitle="Homeowner equity and each partner's total return, as a share of the three combined."
+              >
+                {pieInvalid ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center', fontStyle: 'italic' }}>
+                    Shares aren&apos;t meaningful when a party&apos;s return is negative — see the bar chart.
+                  </Typography>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie data={stakeholderData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="58%" outerRadius="88%" paddingAngle={1} stroke={surface} strokeWidth={2} {...chartAnimation(reduced)}>
+                        {stakeholderData.map((entry) => (<Cell key={entry.key} fill={entry.color} />))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip labelFormatter={(l, payload) => payload?.[0]?.name || ''} />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <Box component="ul" sx={{ listStyle: 'none', m: 0, mt: 2, p: 0 }}>
+                  {stakeholderData.map((d) => (
+                    <Box component="li" key={d.key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '2px', bgcolor: d.color, flexShrink: 0 }} aria-hidden />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{d.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{d.share.toFixed(1)}% appreciation share</Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                          {pieInvalid ? '—' : (stakeholderSum ? `${((d.value / stakeholderSum) * 100).toFixed(0)}%` : '—')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(d.value)}</Typography>
+                      </Box>
+                    </Box>
+                  ))}
                 </Box>
-              ))}
+              </ChartCard>
+
+              <ChartCard fill title="Stakeholder returns" subtitle="Homeowner equity and each partner's total return at exit.">
+                <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+                  <BarChart data={stakeholderData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                    <CartesianGrid {...cs.grid} />
+                    <XAxis dataKey="name" {...cs.xAxis} interval={0} />
+                    <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
+                    <Tooltip content={<ChartTooltip labelFormatter={(l) => l} />} cursor={cs.barCursor} />
+                    <Bar dataKey="value" name="At exit" radius={[4, 4, 0, 0]} maxBarSize={64} {...chartAnimation(reduced)}>
+                      {stakeholderData.map((entry) => (<Cell key={entry.key} fill={entry.color} />))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
             </Box>
-          </ChartCard>
+          )}
 
-          <ChartCard fill title="Stakeholder returns" subtitle="Homeowner equity and each partner's total return at exit.">
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-              <BarChart data={stakeholderData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid {...cs.grid} />
-                <XAxis dataKey="name" {...cs.xAxis} interval={0} />
-                <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
-                <Tooltip content={<ChartTooltip labelFormatter={(l) => l} />} cursor={cs.barCursor} />
-                <Bar dataKey="value" name="At exit" radius={[4, 4, 0, 0]} maxBarSize={64} isAnimationActive={false}>
-                  {stakeholderData.map((entry) => (<Cell key={entry.key} fill={entry.color} />))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+          {chartView === 'cashflow' && (
+            <ChartCard
+              data-testid="chart-cashflow"
+              title="Principal paydown vs. remaining balance"
+              subtitle="Cumulative principal the homeowner has repaid, and the mortgage balance still outstanding."
+            >
+              <ResponsiveContainer width="100%" height={380}>
+                <LineChart data={yearlyData} margin={plotMargin}>
+                  <CartesianGrid {...cs.grid} />
+                  <XAxis {...yearAxisProps} {...cs.xAxis} />
+                  <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
+                  <Tooltip content={<ChartTooltip />} cursor={cs.cursor} />
+                  <Legend {...cs.legend} payload={loanLegend} />
+                  <Line type="monotone" dataKey="principalPaid" stroke={cs.palette.homeowner} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: surface, strokeWidth: 2 }} name="Principal paid" {...chartAnimation(reduced)} />
+                  <Line type="monotone" dataKey="remainingBalance" stroke={cs.palette.total} strokeWidth={2} strokeDasharray="6 4" dot={false} activeDot={{ r: 4, stroke: surface, strokeWidth: 2 }} name="Remaining balance" {...chartAnimation(reduced)} />
+                  {exitMarker}
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
         </Box>
-      )}
-
-      {chartView === 'cashflow' && (
-        <ChartCard
-          data-testid="chart-cashflow"
-          title="Principal paydown vs. remaining balance"
-          subtitle="Cumulative principal the homeowner has repaid, and the mortgage balance still outstanding."
-        >
-          <ResponsiveContainer width="100%" height={380}>
-            <LineChart data={yearlyData} margin={plotMargin}>
-              <CartesianGrid {...cs.grid} />
-              <XAxis {...yearAxisProps} {...cs.xAxis} />
-              <YAxis tickFormatter={formatAxisCurrency} {...cs.yAxis} />
-              <Tooltip content={<ChartTooltip />} cursor={cs.cursor} />
-              <Legend {...cs.legend} payload={loanLegend} />
-              <Line type="monotone" dataKey="principalPaid" stroke={cs.palette.homeowner} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: surface, strokeWidth: 2 }} name="Principal paid" animationDuration={800} />
-              <Line type="monotone" dataKey="remainingBalance" stroke={cs.palette.total} strokeWidth={2} strokeDasharray="6 4" dot={false} activeDot={{ r: 4, stroke: surface, strokeWidth: 2 }} name="Remaining balance" animationDuration={800} />
-              {exitMarker}
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
+      </Box>
 
       <Note title="50/50 partnership cash flow." sx={{ mt: 3 }}>
         DR Horton receives {formatCurrency(metrics.drHortonCashInflow)} immediately at Year 0 (home purchase) via the homeowner's mortgage for construction costs. Total project cost of {formatCurrency(metrics.totalProjectCost)} is shared equally: DR Horton {formatCurrency(metrics.drHortonCostShare)}, Berkshire {formatCurrency(metrics.berkshireCostShare)}.

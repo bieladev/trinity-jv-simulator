@@ -110,7 +110,7 @@ function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onRe
 
           <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} sx={{ flexShrink: 0 }}>
             {currentView !== 'welcome' && (
-              <Button variant="outlined" size="small" onClick={onNavigateHome}>
+              <Button variant="outlined" size="small" onClick={onNavigateHome} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
                 Start over
               </Button>
             )}
