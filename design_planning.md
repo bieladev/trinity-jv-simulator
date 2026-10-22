@@ -34,6 +34,7 @@ Overview > Assumptions > Results. The former Summary step was removed: everythin
 - Browser Back / Forward move between the three screens (`history.pushState` per screen change, `popstate` handled), instead of leaving the tool.
 - Returning to the overview with saved work shows "Continue where you left off: <scenario>" with Edit assumptions / View results.
 - A preset whose values were changed is labelled "<name> (edited)" on Results, and can be compared against the original preset.
+- Opening another preset or a new custom scenario while the saved assumptions are edited asks first ("Replace your edited scenario?", focus on "Keep my changes"); unedited work is replaced without a question. Confirmation dialogs open with focus on the safe action.
 
 ## Shared components
 `common/PageHeader`, `common/SectionHeading`, `common/Note`, `common/FormSection` (+ `SliderLabel`), `common/StakeholderLabel`, `charts/chartKit`.
