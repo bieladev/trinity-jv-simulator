@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "dev:host": "vite --host",
     "test": "vitest run",
-    "build:single": "vite build --config vite.single.config.js && mv share/index.html share/trinity-jv-simulator.html"
+    "build:single": "vite build --config vite.single.config.js && mv download/index.html download/trinity-jv-simulator.html"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
