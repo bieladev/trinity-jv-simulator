@@ -24,6 +24,7 @@ import {
   LockOutlined as LockOutlinedIcon,
   ChevronRightOutlined as ChevronRightIcon,
   TuneOutlined as TuneOutlinedIcon,
+  HistoryOutlined as HistoryOutlinedIcon,
 } from '@mui/icons-material';
 import { 
   scenarioPresets, 
@@ -53,7 +54,7 @@ const formatCurrency = (value) => {
   }).format(value);
 };
 
-function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
+function WelcomeSection({ onLoadScenario, onSkipToAssumptions, resume = null }) {
   const [showBenchmarks, setShowBenchmarks] = useState(false);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
 
@@ -152,6 +153,30 @@ function WelcomeSection({ onLoadScenario, onSkipToAssumptions }) {
           title="Model the return for every party in the Trinity JV"
           description="Set the assumptions for one home and see what the homeowner, DR Horton and Berkshire each put in, take out and earn a year, from purchase to exit."
           aside={<HeroValueVisual />}
+          meta={resume && (
+            <Box
+              data-testid="resume-panel"
+              role="region"
+              aria-label="Continue where you left off"
+              sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 1, py: 1.5, px: 2, border: '1px solid', borderColor: 'divider', borderRadius: '6px', bgcolor: 'background.paper', maxWidth: 680 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0, flex: '1 1 220px' }}>
+                <HistoryOutlinedIcon sx={{ color: 'text.secondary', fontSize: 20, flexShrink: 0 }} aria-hidden />
+                <Typography variant="body2" sx={{ minWidth: 0 }}>
+                  <Box component="span" sx={{ color: 'text.secondary' }}>Continue where you left off: </Box>
+                  <Box component="strong" sx={{ fontWeight: 600 }}>{resume.name}</Box>
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button size="small" variant="text" onClick={resume.onOpenAssumptions} data-testid="resume-assumptions-button" sx={{ minHeight: { xs: 44, sm: 32 } }}>
+                  Edit assumptions
+                </Button>
+                <Button size="small" variant="outlined" onClick={resume.onOpenResults} endIcon={<ChevronRightIcon />} data-testid="resume-results-button" sx={{ minHeight: { xs: 44, sm: 32 } }}>
+                  View results
+                </Button>
+              </Box>
+            </Box>
+          )}
           actions={
             <>
               <Button variant="contained" size="large" onClick={onSkipToAssumptions} data-testid="hero-custom-button">

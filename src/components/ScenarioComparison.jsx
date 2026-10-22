@@ -141,7 +141,7 @@ function ScenarioComparison({ baseSimulationData, baseScenarioId, comparisonIds 
   const barMargin = { top: 8, right: 8, bottom: 0, left: 0 };
 
   return (
-    <Container component="section" aria-labelledby="comparison-title" sx={{ mt: 7 }}>
+    <Container component="section" id="results-comparison" aria-labelledby="comparison-title" sx={{ mt: 7, scrollMarginTop: { xs: 88, md: 136 } }}>
       <SectionHeading
         eyebrow="Comparison"
         title={<span id="comparison-title">Scenario comparison</span>}

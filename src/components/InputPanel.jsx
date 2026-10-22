@@ -4,53 +4,31 @@ import {
   Container,
   Button,
   Chip,
+  GlobalStyles,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { ArrowForwardOutlined as ArrowForwardIcon, UndoOutlined as UndoIcon } from '@mui/icons-material';
 import PageHeader from './common/PageHeader';
 import Note from './common/Note';
+import JumpNav from './common/JumpNav';
 import { solveBalancedShares } from '../utils/calculations';
+import { defaultFormData, presetFormData, countChangedFields } from '../utils/data/defaults';
 import PropertyConfig from './input/PropertyConfig';
 import FinancingConfig from './input/FinancingConfig';
 import MarketConfig from './input/MarketConfig';
 import AppreciationShareConfig from './input/AppreciationShareConfig';
 import OptionalFeatures from './input/OptionalFeatures';
+import LivePreview from './input/LivePreview';
 
-const defaultFormData = {
-  homePurchasePrice: 400000,
-  interestRate: 5.00,
-  loanTerm: 30,
-  mortgageType: 'Principal + Interest (Standard)',
-  landValuePercent: 20,
-  totalBuilderCostsPercent: 70,
-  annualAppreciationRate: 3.00,
-  saleYear: 30,
-  drHortonAppreciationShare: 12.5,
-  berkshireAppreciationShare: 12.5,
-  enableInterestIncome: true,
-  interestSplitBerkshire: 50,
-  interestSplitDrHorton: 50,
-  enableCashOutRefi: false,
-  refiYear: 10,
-  equityExtractionPercent: 50,
-  newInterestRate: 6.50,
-  newLoanTerm: 30,
-  enableEarlyAction: false,
-  earlyActionYear: 7,
-  earlyActionType: 'sale',
-  lumpSumPayment: 0,
-  enableRecurringRevenue: false,
-  ownershipDuration: 7,
-  eventTypes: { sale: true, refinance: true, earlyPayoff: true },
-  startingMortgageRate: 5.00,
-  appreciationRatePerCycle: 3.00,
-  drHortonProfitShare: 30,
-  berkshireProfitShare: 20,
-  profitTreatment: 'reinvest',
-  marketBenchmarkIRR: 7.0,
-  partnershipMode: 'realistic',
-};
+const SECTIONS = [
+  { id: 'section-property', index: '01', label: 'Property' },
+  { id: 'section-financing', index: '02', label: 'Financing' },
+  { id: 'section-market', index: '03', label: 'Market and timeline' },
+  { id: 'section-appreciation', index: '04', label: 'Appreciation share' },
+  { id: 'section-optional', index: '05', label: 'Optional features' },
+];
 
-function InputPanel({ onRunSimulation, onShowSummary, onFormChange, scenarioData, scenarioName }) {
+function InputPanel({ onRunSimulation, onFormChange, scenarioData, scenarioName, presetId = null }) {
   const [formData, setFormData] = useState(() => ({ ...defaultFormData, ...(scenarioData || {}) }));
 
   useEffect(() => {
@@ -149,18 +127,55 @@ function InputPanel({ onRunSimulation, onShowSummary, onFormChange, scenarioData
     setFormData(prev => ({ ...prev, eventTypes: { ...prev.eventTypes, [eventType]: event.target.checked } }));
   };
 
-  const getDisplayDescription = () => scenarioName && scenarioName !== 'Custom scenario'
-    ? `Review the ${scenarioName} assumptions below. Every value can be changed before you run the simulation.`
-    : "Set the assumptions for your own Trinity JV scenario. Every value can be changed before you run the simulation.";
+  const isPreset = Boolean(presetFormData(presetId));
+  const changedCount = isPreset ? countChangedFields(formData, presetId) : 0;
+  const handleRestorePreset = () => {
+    const base = presetFormData(presetId);
+    if (base) setFormData(base);
+    // The button removes itself once nothing differs; keep keyboard focus
+    // on the page (the screen title) instead of losing it to <body>.
+    const h1 = document.querySelector('main h1');
+    if (h1) {
+      h1.setAttribute('tabindex', '-1');
+      h1.focus({ preventScroll: true });
+    }
+  };
+
+  const getDisplayDescription = () => isPreset
+    ? `Review the ${scenarioName} assumptions below. Every value can be changed, and the preview at the bottom of the screen updates as you edit.`
+    : 'Set the assumptions for your own Trinity JV scenario. The preview at the bottom of the screen updates as you edit.';
 
   return (
     <Container>
+      {/* Keyboard focus never lands under the sticky action bar: fields
+          scrolled into view stop above it (phones: full-width bar, md+:
+          floating card). Bottom only, so section jumps are unaffected. */}
+      <GlobalStyles styles={{ html: { scrollPaddingBottom: 200, '@media (min-width: 900px)': { scrollPaddingBottom: 170 } } }} />
       <PageHeader
         eyebrow="Step 2 · Assumptions"
         title="Define your assumptions"
         description={getDisplayDescription()}
-        meta={<Chip label={scenarioName || 'Custom scenario'} variant="outlined" data-testid="input-scenario-name" />}
+        meta={
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+            <Chip label={scenarioName || 'Custom scenario'} variant="outlined" data-testid="input-scenario-name" />
+            {changedCount > 0 && (
+              <>
+                <Chip
+                  label={`${changedCount} ${changedCount === 1 ? 'value' : 'values'} changed from the preset`}
+                  size="small"
+                  data-testid="input-changed-count"
+                  sx={{ bgcolor: 'brand.surfaceMuted', color: 'text.primary' }}
+                />
+                <Button size="small" variant="text" startIcon={<UndoIcon />} onClick={handleRestorePreset} data-testid="restore-preset-button" sx={{ minHeight: { xs: 44, sm: 32 } }}>
+                  Restore preset values
+                </Button>
+              </>
+            )}
+          </Box>
+        }
       />
+
+      <JumpNav label="Assumption sections" items={SECTIONS} />
 
       <Note title="50/50 partnership model." sx={{ mb: 4 }}>
         DR Horton and Berkshire Hathaway share all costs and profits equally by default. Land costs, construction costs, interest income and appreciation shares are split 50/50 unless you change them below.
@@ -174,32 +189,36 @@ function InputPanel({ onRunSimulation, onShowSummary, onFormChange, scenarioData
         <OptionalFeatures formData={formData} setFormData={setFormData} handleSwitchChange={handleSwitchChange} handleInputChange={handleInputChange} handleEventTypeChange={handleEventTypeChange} />
       </Box>
 
+      {/* Sticky action bar: the live answer on the left, one main action on the right. */}
       <Box
         sx={(theme) => ({
           position: 'sticky',
-          bottom: 0,
           zIndex: 10,
           mt: 4,
           mx: { xs: -2, sm: -3, md: 0 },
           px: { xs: 2, sm: 3, md: 3 },
-          py: 2,
+          py: { xs: 1.5, md: 2 },
           display: 'flex',
-          flexDirection: { xs: 'column-reverse', sm: 'row' },
-          justifyContent: 'flex-end',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 1.5,
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'stretch', md: 'center' },
+          gap: { xs: 1.5, md: 4 },
           borderTop: '1px solid',
           borderColor: 'divider',
-          backgroundColor: alpha(theme.palette.background.default, 0.92),
+          backgroundColor: alpha(theme.palette.background.default, 0.94),
           backdropFilter: 'blur(8px)',
-          [theme.breakpoints.up('md')]: { border: '1px solid', borderColor: 'divider', borderRadius: '6px', bottom: 16, boxShadow: theme.shadows[8] },
+          // Floating card from md up. Responsive values (not a second
+          // breakpoint key) so the row layout above is not overridden.
+          // Colour inside the shorthand: a bare '1px solid' resets it to
+          // currentColor (a text-coloured outline instead of the hairline).
+          border: { md: `1px solid ${theme.palette.divider}` },
+          borderRadius: { md: '6px' },
+          bottom: { xs: 0, md: 16 },
+          boxShadow: { md: theme.shadows[8] },
         })}
       >
-        <Button variant="outlined" size="large" onClick={() => onShowSummary(formData)} data-testid="show-summary-button">
-          Review summary
-        </Button>
-        <Button variant="contained" size="large" onClick={() => onRunSimulation(formData)} data-testid="run-simulation-button">
-          Run full simulation
+        <LivePreview formData={formData} />
+        <Button variant="contained" size="large" endIcon={<ArrowForwardIcon />} onClick={() => onRunSimulation(formData)} data-testid="run-simulation-button" sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+          View full results
         </Button>
       </Box>
     </Container>

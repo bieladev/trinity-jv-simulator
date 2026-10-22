@@ -30,7 +30,7 @@ const USES = [
   {
     icon: <GroupsOutlinedIcon />,
     title: 'Share one consistent model with both teams',
-    body: 'The summary, results, charts and comparison all run on one calculation, so DR Horton and Berkshire see the same figures from the same assumptions.',
+    body: 'The live preview, results, charts and comparison all run on one calculation, so DR Horton and Berkshire see the same figures from the same assumptions.',
   },
 ];
 

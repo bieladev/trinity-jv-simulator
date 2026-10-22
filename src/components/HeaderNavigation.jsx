@@ -19,30 +19,23 @@ import {
 } from '@mui/icons-material';
 
 // No logo by request: the header shows the product name as text only.
+//
+// Navigation model (one meaning per control):
+// - Product name and the step indicator move between screens. They never
+//   clear anything.
+// - Guide opens the overview at "How the program works".
+// - Start over is the only control that clears saved work, and it asks first.
 
-function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onOpenGuide, onReset, colorMode = 'light', onToggleColorMode }) {
+const STEPS = [
+  { view: 'welcome', label: 'Overview' },
+  { view: 'input', label: 'Assumptions' },
+  { view: 'results', label: 'Results' },
+];
+
+function HeaderNavigation({ currentView, onNavigate, canOpenInput = false, canOpenResults = false, onOpenGuide, onStartOver, hasSavedWork = false, colorMode = 'light', onToggleColorMode }) {
   const theme = useTheme();
   const isDark = colorMode === 'dark';
-
-  const getBreadcrumbs = () => {
-    const breadcrumbs = [{ label: 'Overview', onClick: onNavigateHome, isClickable: true }];
-    if (currentView === 'input') {
-      breadcrumbs.push({ label: 'Assumptions', isClickable: false });
-    } else if (currentView === 'summary') {
-      breadcrumbs.push(
-        { label: 'Assumptions', onClick: onNavigateToInput, isClickable: true },
-        { label: 'Summary', isClickable: false }
-      );
-    } else if (currentView === 'results') {
-      breadcrumbs.push(
-        { label: 'Assumptions', onClick: onNavigateToInput, isClickable: true },
-        { label: 'Results', isClickable: false }
-      );
-    }
-    return breadcrumbs;
-  };
-
-  const breadcrumbs = getBreadcrumbs();
+  const reachable = { welcome: true, input: canOpenInput, results: canOpenResults };
 
   return (
     <Box
@@ -64,8 +57,8 @@ function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onOp
             <Box
               component="button"
               type="button"
-              onClick={onNavigateHome}
-              aria-label="Trinity JV Simulator, back to overview"
+              onClick={() => onNavigate('welcome')}
+              aria-label="Trinity JV Simulator, go to overview"
               sx={{ display: 'flex', alignItems: 'center', p: 0, border: 0, background: 'none', color: 'text.primary', cursor: 'pointer', borderRadius: '2px', flexShrink: 0 }}
             >
               <Typography variant="h6" component="span" sx={{ whiteSpace: 'nowrap', fontSize: { xs: '1rem', sm: '1.125rem' } }}>
@@ -74,35 +67,39 @@ function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onOp
             </Box>
             <Breadcrumbs
               separator={<NavigateNextIcon sx={{ fontSize: 16 }} />}
-              aria-label="breadcrumb"
+              aria-label="Steps"
               sx={{ display: { xs: 'none', md: 'flex' }, ml: 1, '& .MuiBreadcrumbs-ol': { flexWrap: 'nowrap' } }}
             >
-              {breadcrumbs.map((crumb, index) => {
-                const isLast = index === breadcrumbs.length - 1;
-                if (crumb.isClickable && !isLast) {
+              {STEPS.map((step, index) => {
+                const isCurrent = step.view === currentView;
+                const label = `${index + 1}. ${step.label}`;
+                if (isCurrent) {
                   return (
-                    <Link
-                      key={crumb.label}
-                      component="button"
-                      type="button"
-                      onClick={crumb.onClick}
-                      variant="body2"
-                      underline="hover"
-                      sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}
-                    >
-                      {crumb.label}
-                    </Link>
+                    <Typography key={step.view} variant="body2" aria-current="step" sx={{ color: 'text.primary', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {label}
+                    </Typography>
+                  );
+                }
+                if (!reachable[step.view]) {
+                  return (
+                    <Typography key={step.view} variant="body2" sx={{ color: 'text.disabled', whiteSpace: 'nowrap' }} title="Choose a starting point first">
+                      {label}
+                    </Typography>
                   );
                 }
                 return (
-                  <Typography
-                    key={crumb.label}
+                  <Link
+                    key={step.view}
+                    component="button"
+                    type="button"
+                    onClick={() => onNavigate(step.view)}
                     variant="body2"
-                    aria-current={isLast ? 'page' : undefined}
-                    sx={{ color: isLast ? 'text.primary' : 'text.secondary', fontWeight: isLast ? 600 : 400, whiteSpace: 'nowrap' }}
+                    underline="hover"
+                    data-testid={`step-${step.view}`}
+                    sx={{ color: 'text.secondary', whiteSpace: 'nowrap', '&:hover': { color: 'text.primary' } }}
                   >
-                    {crumb.label}
-                  </Typography>
+                    {label}
+                  </Link>
                 );
               })}
             </Breadcrumbs>
@@ -117,33 +114,36 @@ function HeaderNavigation({ currentView, onNavigateHome, onNavigateToInput, onOp
                 startIcon={<MenuBookOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
                 data-testid="guide-link"
                 aria-label="Guide: how the program works"
-                sx={{ color: 'text.secondary', minWidth: 0, '&:hover': { color: 'text.primary' }, '& .MuiButton-startIcon': { display: { xs: 'none', sm: 'inherit' } } }}
+                sx={{ color: 'text.secondary', minWidth: 0, minHeight: { xs: 44, sm: 36 }, '&:hover': { color: 'text.primary' }, '& .MuiButton-startIcon': { display: { xs: 'none', sm: 'inherit' } } }}
               >
                 Guide
               </Button>
             )}
-            {currentView !== 'welcome' && (
-              <Button variant="outlined" size="small" onClick={onNavigateHome} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
-                Start over
-              </Button>
-            )}
-            {onReset && (
-              <Tooltip title="Clear saved inputs, results and comparisons">
+            {onStartOver && hasSavedWork && (
+              <Tooltip title="Clear saved assumptions, results and comparisons">
                 <Button
                   variant="text"
                   size="small"
-                  onClick={onReset}
-                  startIcon={<RestartAltOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
+                  onClick={onStartOver}
+                  startIcon={<RestartAltOutlinedIcon />}
                   data-testid="reset-button"
-                  sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
+                  aria-label="Start over: clear saved work"
+                  sx={{
+                    color: 'text.secondary',
+                    minWidth: { xs: 44, sm: 0 },
+                    minHeight: { xs: 44, sm: 36 },
+                    '&:hover': { color: 'text.primary' },
+                    // Phones: icon only, so the header fits at 375px.
+                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } },
+                  }}
                 >
-                  Reset
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Start over</Box>
                 </Button>
               </Tooltip>
             )}
             {onToggleColorMode && (
               <Tooltip title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
-                <IconButton onClick={onToggleColorMode} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'} data-testid="color-mode-toggle" sx={{ width: 40, height: 40 }}>
+                <IconButton onClick={onToggleColorMode} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'} data-testid="color-mode-toggle" sx={{ width: { xs: 44, sm: 40 }, height: { xs: 44, sm: 40 } }}>
                   {isDark ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}
                 </IconButton>
               </Tooltip>

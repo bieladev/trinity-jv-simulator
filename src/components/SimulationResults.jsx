@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
@@ -6,6 +6,8 @@ import {
   Paper,
   Button,
   Tooltip,
+  Collapse,
+  Snackbar,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -14,6 +16,8 @@ import {
   SouthEastOutlined as SouthEastIcon,
   EastOutlined as EastIcon,
   InfoOutlined as InfoOutlinedIcon,
+  ExpandMoreOutlined as ExpandMoreIcon,
+  FileDownloadOutlined as FileDownloadOutlinedIcon,
 } from '@mui/icons-material';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 import { calculateMetrics, generateYearlySeries, ANNUALIZED_RETURN_HELP, HOMEOWNER_RETURN_BASIS_NOTE, PARTNER_LOAN_CAPITAL_NOTE } from '../utils/calculations';
@@ -22,6 +26,8 @@ import SectionHeading from './common/SectionHeading';
 import StakeholderLabel from './common/StakeholderLabel';
 import AnimatedNumber from './common/AnimatedNumber';
 import Reveal from './common/Reveal';
+import JumpNav, { HEADER_OFFSET } from './common/JumpNav';
+import { downloadSummary } from '../utils/summaryReport';
 import { motion, useReveal, revealStyle, useReducedMotion, useEnterReplay, chartAnimation } from '../utils/motion';
 
 // Tiny trend line for a stakeholder tile. Decorative: the figures beside it
@@ -43,7 +49,18 @@ function Sparkline({ data, dataKey, color, index = 0 }) {
   );
 }
 
+// In-page sections of the results screen (charts, comparison and the
+// assumptions list are rendered by sibling components with these ids).
+const RESULT_SECTIONS = [
+  { id: 'results-returns', label: 'Returns' },
+  { id: 'results-charts', label: 'Charts' },
+  { id: 'results-comparison', label: 'Compare scenarios' },
+  { id: 'results-assumptions', label: 'Assumptions used' },
+];
+
 function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) {
+  const [showMethod, setShowMethod] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   if (!simulationData) {
     return null;
   }
@@ -169,29 +186,71 @@ function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) 
   ];
 
   return (
+    <>
     <Container>
       <PageHeader
         eyebrow={`Step 3 · Results · ${getDisplayTitle()}`}
         title="Simulation results"
         description={`Each party's position at exit in year ${exitYear}, under the 50/50 partnership model.`}
         actions={
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={onNavigateToInput}>
-            Edit assumptions
-          </Button>
+          <>
+            <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={onNavigateToInput} data-testid="results-edit-button">
+              Edit assumptions
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadOutlinedIcon />}
+              data-testid="download-summary-button"
+              onClick={() => {
+                downloadSummary(simulationData, getDisplayTitle());
+                setDownloaded(true);
+              }}
+            >
+              Download summary
+            </Button>
+          </>
         }
       />
+    </Container>
 
-      <Box component="section" aria-labelledby="stakeholder-returns-title">
+    {/* The section nav sticks for the whole results screen (charts,
+        comparison and assumptions are sibling components), so its sticky
+        wrapper sits outside this component's own Container. */}
+    <Box sx={{ position: { md: 'sticky' }, top: { md: HEADER_OFFSET }, zIndex: 20, mb: 3 }}>
+      <Container>
+        <JumpNav label="Results sections" items={RESULT_SECTIONS} sx={{ position: 'static', mb: 0 }} />
+      </Container>
+    </Box>
+
+    <Container>
+      <Box component="section" id="results-returns" aria-labelledby="stakeholder-returns-title" sx={{ scrollMarginTop: { xs: 88, md: 136 } }}>
         <SectionHeading
           title={<span id="stakeholder-returns-title">Stakeholder returns</span>}
-          description={
-            <span data-testid="annualized-return-help">
+          sx={{ mb: 1 }}
+        />
+        {/* The answer comes first: the method sits behind a toggle so the
+            three tiles land on the first screen, on phones too. */}
+        <Box sx={{ mb: 3 }}>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => setShowMethod((v) => !v)}
+            aria-expanded={showMethod}
+            aria-controls="annualized-return-method"
+            data-testid="annualized-return-toggle"
+            endIcon={<ExpandMoreIcon sx={{ transition: `transform ${motion.duration.base}ms ${motion.easing.out}`, transform: showMethod ? 'rotate(180deg)' : 'none' }} />}
+            sx={{ ml: -1, minHeight: { xs: 44, sm: 32 }, color: 'brand.primaryText' }}
+          >
+            How annualized return is calculated
+          </Button>
+          <Collapse in={showMethod} id="annualized-return-method">
+            <Typography variant="body2" color="text.secondary" data-testid="annualized-return-help" sx={{ mt: 1, maxWidth: 760 }}>
               {simulationData.enableInterestIncome
                 ? <>Annualized return. Homeowner: {ANNUALIZED_RETURN_HELP} {HOMEOWNER_RETURN_BASIS_NOTE} Partners: {PARTNER_LOAN_CAPITAL_NOTE}</>
                 : <>Annualized return: {ANNUALIZED_RETURN_HELP} {HOMEOWNER_RETURN_BASIS_NOTE}</>}
-            </span>
-          }
-        />
+            </Typography>
+          </Collapse>
+        </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 2, md: 3 } }}>
           {stakeholders.map((s, i) => (
             <StakeholderTile key={s.key} index={i} stakeholder={s} yearlyData={yearlyData} formatCurrency={formatCurrency} formatPercentage={formatPercentage} />
@@ -240,7 +299,16 @@ function SimulationResults({ simulationData, scenarioName, onNavigateToInput }) 
           </Paper>
         </Reveal>
       </Box>
+
+      <Snackbar
+        open={downloaded}
+        autoHideDuration={6000}
+        onClose={() => setDownloaded(false)}
+        message="Summary downloaded as an HTML file. Open it in your browser and print to PDF if you need a PDF copy."
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Container>
+    </>
   );
 }
 

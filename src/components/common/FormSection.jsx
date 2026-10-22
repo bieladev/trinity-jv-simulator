@@ -14,7 +14,8 @@ function FormSection({ index, title, description, children, id }) {
       variant="outlined"
       aria-labelledby={id ? `${id}-title` : undefined}
       id={id}
-      sx={{ p: { xs: 2.5, md: 4 }, scrollMarginTop: 96 }}
+      /* scroll margin clears the sticky header and, from md up, the sticky section nav */
+      sx={{ p: { xs: 2.5, md: 4 }, scrollMarginTop: { xs: 88, md: 136 } }}
     >
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '240px 1fr' }, gap: { xs: 3, md: 5 } }}>
         <Box>

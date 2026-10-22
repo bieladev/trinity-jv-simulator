@@ -1,17 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline, Box, Container, Typography } from '@mui/material';
+import { CssBaseline, Box, Container, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import { createAppTheme } from './theme';
 import { getInitialColorMode, getStoredColorMode, storeColorMode } from './utils/colorMode';
 import HeaderNavigation from './components/HeaderNavigation';
 import WelcomeSection from './components/WelcomeSection';
 import InputPanel from './components/InputPanel';
-import SimulationSummary from './components/SimulationSummary';
 import SimulationResults from './components/SimulationResults';
+import AssumptionsUsed from './components/AssumptionsUsed';
 import ChartsPanel from './components/ChartsPanel';
 import ScenarioComparison from './components/ScenarioComparison';
 import { scenarioPresets } from './utils/data/scenarios';
 import { loadState, saveState, clearState, DEFAULT_STATE } from './utils/persistence';
+import { scenarioDisplayName, countChangedFields } from './utils/data/defaults';
 import { useReducedMotion, scrollToId, motion } from './utils/motion';
 
 // Thin wrapper that only forwards `theme`. MUI's ThemeProvider rejects any
@@ -50,7 +51,9 @@ function App() {
 
   // Restored once from localStorage (validated; defaults if missing/corrupt).
   const [restored] = useState(loadState);
-  const [currentView, setCurrentView] = useState(restored.currentView);
+  // The former Summary step now lives on Results; a session saved on it
+  // resumes on Assumptions.
+  const [currentView, setCurrentView] = useState(restored.currentView === 'summary' ? 'input' : restored.currentView);
   const [selectedScenarioId, setSelectedScenarioId] = useState(restored.selectedScenarioId);
   const [formData, setFormData] = useState(restored.formData);
   const [simulationData, setSimulationData] = useState(restored.simulationData);
@@ -71,13 +74,10 @@ function App() {
     });
   }, [currentView, selectedScenarioId, formData, simulationData, comparisonIds, draftFormData]);
 
-  const inputPanelRef = useRef(null);
-  const resultsRef = useRef(null);
-
   // Every screen change starts at the top. The jump happens in the same task
   // as the state change (before the next paint), so the incoming screen's
   // fade-in plays from the top of the page instead of racing a smooth scroll.
-  const scrollToRef = () => {
+  const scrollToTop = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   };
 
@@ -89,58 +89,113 @@ function App() {
     screenAnimatedRef.current = true;
   }
 
-  const handleLoadScenario = (data, name, id) => {
+  // After a screen change, move focus to the new screen's heading so keyboard
+  // and screen-reader users start at the top of it (not on a removed button).
+  const focusViewRef = useRef(currentView);
+  useEffect(() => {
+    if (focusViewRef.current === currentView) return;
+    focusViewRef.current = currentView;
+    const h1 = document.querySelector('main h1');
+    if (h1) {
+      h1.setAttribute('tabindex', '-1');
+      h1.style.outline = 'none';
+      h1.focus({ preventScroll: true });
+    }
+  }, [currentView]);
+
+  // The assumptions as they stand right now (in-progress edits included).
+  const currentForm = currentView === 'input' && draftFormData ? draftFormData : formData;
+  const canOpenInput = Boolean(currentForm);
+  const canOpenResults = Boolean(currentForm);
+  const hasSavedWork = Boolean(currentForm || simulationData || comparisonIds.length);
+
+  // One way to change screens. Leaving Assumptions keeps the edits; opening
+  // Results always shows the current assumptions (never stale figures).
+  // `push` adds a browser-history entry so the Back button steps back
+  // through the screens instead of leaving the tool.
+  const navigate = (view, { push = true } = {}) => {
+    let target = view;
+    if ((target === 'input' || target === 'results') && !currentForm) target = 'welcome';
+    if (currentView === 'input' && draftFormData) {
+      setFormData(draftFormData);
+      setDraftFormData(null);
+    }
+    if (target === 'results') setSimulationData(currentForm);
+    setCurrentView(target);
+    if (push && target !== currentView) {
+      try { window.history.pushState({ trinityView: target }, ''); } catch { /* history unavailable */ }
+    }
+    scrollToTop();
+    return target;
+  };
+
+  // Browser Back / Forward: move between screens without adding entries.
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  useEffect(() => {
+    try { window.history.replaceState({ trinityView: currentView }, ''); } catch { /* ignore */ }
+    const onPop = (e) => navigateRef.current(e.state?.trinityView || 'welcome', { push: false });
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadAndOpenInput = (id, data) => {
     setSelectedScenarioId(id);
     setFormData(data);
     setDraftFormData(null);
     setSimulationData(null); // Clear previous results
     setCurrentView('input');
-    scrollToRef(inputPanelRef);
+    if (currentView !== 'input') {
+      try { window.history.pushState({ trinityView: 'input' }, ''); } catch { /* ignore */ }
+    }
+    scrollToTop();
   };
 
-  const handleSkipToAssumptions = () => {
-    setSelectedScenarioId(null); // No scenario selected
-    setFormData(scenarioPresets.standard.data); // Load default data
-    setDraftFormData(null);
-    setSimulationData(null);
-    setCurrentView('input');
-    scrollToRef(inputPanelRef);
+  // Opening another starting point replaces the saved assumptions. When they
+  // were edited, ask first: Start over stays the only control that discards
+  // work without a question. (A custom scenario starts from Standard.)
+  const [confirmReplace, setConfirmReplace] = useState(null); // { id, data }
+  const hasEdits = Boolean(currentForm) && countChangedFields(currentForm, selectedScenarioId || 'standard') > 0;
+  const requestLoad = (id, data) => {
+    if (hasEdits) setConfirmReplace({ id, data });
+    else loadAndOpenInput(id, data);
   };
 
-  const handleShowSummary = (data) => {
-    setFormData(data);
-    setDraftFormData(null); // committed
-    setCurrentView('summary');
-    scrollToRef(resultsRef);
-  };
+  const handleLoadScenario = (data, name, id) => requestLoad(id, data);
+
+  const handleSkipToAssumptions = () => requestLoad(null, scenarioPresets.standard.data); // custom, from the default data
 
   const handleRunSimulation = (data) => {
     setFormData(data);
     setDraftFormData(null); // committed
     setSimulationData(data);
     setCurrentView('results');
-    scrollToRef(resultsRef);
+    try { window.history.pushState({ trinityView: 'results' }, ''); } catch { /* ignore */ }
+    scrollToTop();
   };
 
-  const handleEditAssumptions = () => {
-    setCurrentView('input');
-    scrollToRef(inputPanelRef);
-  };
+  const handleNavigateToInput = () => navigate('input');
 
-  const handleNavigateHome = () => {
+  // Start over: the only control that clears saved work, so it asks first.
+  const [confirmStartOver, setConfirmStartOver] = useState(false);
+  // Confirmation dialogs open with focus on the safe action. Done once the
+  // dialog has entered: `autoFocus` alone is undone when focus returns to
+  // the header trigger and the focus trap falls back to the dialog itself.
+  const focusSafeAction = (node) => node?.querySelector?.('[data-safe-action]')?.focus();
+  const handleStartOver = () => {
+    setConfirmStartOver(false);
+    clearState();
     setCurrentView(DEFAULT_STATE.currentView);
     setSelectedScenarioId(DEFAULT_STATE.selectedScenarioId);
     setFormData(DEFAULT_STATE.formData);
     setDraftFormData(null);
     setSimulationData(DEFAULT_STATE.simulationData);
     setComparisonIds(DEFAULT_STATE.comparisonIds);
-    scrollToRef();
-  };
-
-  // Clears the saved session and returns to a fresh welcome screen.
-  const handleReset = () => {
-    clearState();
-    handleNavigateHome();
+    if (currentView !== 'welcome') {
+      try { window.history.pushState({ trinityView: 'welcome' }, ''); } catch { /* ignore */ }
+    }
+    scrollToTop();
   };
 
   // Header "Guide": back to the overview (inputs and results are kept) and
@@ -152,9 +207,8 @@ function App() {
       scrollToId('how-it-works');
       return;
     }
-    setCurrentView('welcome');
+    navigate('welcome');
     setPendingSection('how-it-works');
-    scrollToRef();
   };
   useEffect(() => {
     if (!pendingSection || currentView !== 'welcome') return undefined;
@@ -167,10 +221,20 @@ function App() {
     return () => clearTimeout(timer);
   }, [pendingSection, currentView, reducedMotion]);
 
-  const handleNavigateToInput = () => {
-    setCurrentView('input');
-    scrollToRef(inputPanelRef);
-  };
+  // Names shown on screen: the preset name, marked "(edited)" once changed.
+  const inputName = scenarioDisplayName(selectedScenarioId, formData);
+  const resultsName = scenarioDisplayName(selectedScenarioId, simulationData);
+  // An edited preset is no longer the preset, so it can be compared with it.
+  const resultsBaseId = selectedScenarioId && countChangedFields(simulationData, selectedScenarioId) === 0 ? selectedScenarioId : null;
+
+  // Returning to the overview with work saved: offer a way straight back.
+  const resume = currentForm
+    ? {
+        name: scenarioDisplayName(selectedScenarioId, currentForm),
+        onOpenAssumptions: () => navigate('input'),
+        onOpenResults: () => navigate('results'),
+      }
+    : null;
 
   const renderContent = () => {
     switch (currentView) {
@@ -179,52 +243,41 @@ function App() {
           <WelcomeSection 
             onLoadScenario={handleLoadScenario}
             onSkipToAssumptions={handleSkipToAssumptions}
+            resume={resume}
           />
         );
       case 'input':
         return (
-          <div ref={inputPanelRef} style={{ scrollMarginTop: 64 }}>
-            <InputPanel 
-              key={selectedScenarioId || 'custom'}
-              onRunSimulation={handleRunSimulation}
-              onShowSummary={handleShowSummary}
-              onFormChange={handleFormChange}
-              scenarioData={formData}
-              scenarioName={selectedScenarioId ? scenarioPresets[selectedScenarioId].name : 'Custom scenario'}
-            />
-          </div>
-        );
-      case 'summary':
-        return (
-          <div ref={resultsRef} style={{ scrollMarginTop: 64 }}>
-            <SimulationSummary 
-              formData={formData}
-              scenarioName={selectedScenarioId ? scenarioPresets[selectedScenarioId].name : 'Custom scenario'}
-              onEditAssumptions={handleEditAssumptions}
-              onRunSimulation={() => handleRunSimulation(formData)}
-            />
-          </div>
+          <InputPanel 
+            key={selectedScenarioId || 'custom'}
+            onRunSimulation={handleRunSimulation}
+            onFormChange={handleFormChange}
+            scenarioData={formData}
+            scenarioName={selectedScenarioId ? scenarioPresets[selectedScenarioId].name : 'Custom scenario'}
+            presetId={selectedScenarioId}
+          />
         );
       case 'results':
         return (
-          <div ref={resultsRef} style={{ scrollMarginTop: 64 }}>
+          <>
             <SimulationResults 
               simulationData={simulationData}
-              scenarioName={selectedScenarioId ? scenarioPresets[selectedScenarioId].name : 'Custom scenario'}
+              scenarioName={resultsName}
               onNavigateToInput={handleNavigateToInput}
             />
             <ChartsPanel 
               simulationData={simulationData} 
-              scenarioName={selectedScenarioId ? scenarioPresets[selectedScenarioId].name : 'Custom scenario'}
+              scenarioName={resultsName}
               onNavigateToInput={handleNavigateToInput}
             />
             <ScenarioComparison
               baseSimulationData={simulationData}
-              baseScenarioId={selectedScenarioId}
+              baseScenarioId={resultsBaseId}
               comparisonIds={comparisonIds}
               onComparisonIdsChange={setComparisonIds}
             />
-          </div>
+            <AssumptionsUsed simulationData={simulationData} onNavigateToInput={handleNavigateToInput} />
+          </>
         );
       default:
         return <WelcomeSection onLoadScenario={handleLoadScenario} onSkipToAssumptions={handleSkipToAssumptions} />;
@@ -237,10 +290,12 @@ function App() {
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflowX: 'clip' }}>
         <HeaderNavigation 
           currentView={currentView}
-          onNavigateHome={handleNavigateHome}
-          onNavigateToInput={handleNavigateToInput}
+          onNavigate={(view) => navigate(view)}
+          canOpenInput={canOpenInput}
+          canOpenResults={canOpenResults}
           onOpenGuide={handleOpenGuide}
-          onReset={handleReset}
+          onStartOver={() => setConfirmStartOver(true)}
+          hasSavedWork={hasSavedWork}
           colorMode={colorMode}
           onToggleColorMode={handleToggleColorMode}
         />
@@ -257,6 +312,47 @@ function App() {
           </Container>
         </Box>
       </Box>
+      <Dialog open={confirmStartOver} onClose={() => setConfirmStartOver(false)} aria-labelledby="start-over-title" aria-describedby="start-over-text" maxWidth="xs" fullWidth TransitionProps={{ onEntered: focusSafeAction }}>
+        <DialogTitle id="start-over-title" component="h2" sx={{ typography: 'h4' }}>Start over?</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="start-over-text">
+            This clears the assumptions, results and comparisons saved in this browser. Presets are not affected.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" onClick={() => setConfirmStartOver(false)} data-safe-action>
+            Keep my work
+          </Button>
+          <Button variant="contained" color="error" onClick={handleStartOver} data-testid="confirm-start-over-button">
+            Clear and start over
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={Boolean(confirmReplace)} onClose={() => setConfirmReplace(null)} aria-labelledby="replace-title" aria-describedby="replace-text" maxWidth="xs" fullWidth TransitionProps={{ onEntered: focusSafeAction }}>
+        <DialogTitle id="replace-title" component="h2" sx={{ typography: 'h4' }}>Replace your edited scenario?</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="replace-text">
+            {`Your changes to ${selectedScenarioId ? scenarioPresets[selectedScenarioId].name : 'the custom scenario'} are saved in this browser. Opening ${confirmReplace?.id ? scenarioPresets[confirmReplace.id].name : 'a new custom scenario'} replaces these assumptions and their results. Comparisons are kept.`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" onClick={() => setConfirmReplace(null)} data-safe-action data-testid="keep-scenario-button">
+            Keep my changes
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            data-testid="confirm-replace-button"
+            onClick={() => {
+              const next = confirmReplace;
+              setConfirmReplace(null);
+              if (next) loadAndOpenInput(next.id, next.data);
+            }}
+          >
+            Replace scenario
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AppThemeProvider>
   );
 }

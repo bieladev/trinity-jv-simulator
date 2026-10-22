@@ -126,7 +126,7 @@ function ChartsPanel({ simulationData, scenarioName, onNavigateToInput }) {
   const getTitle = () => scenarioName || "Custom Simulation";
 
   return (
-    <Container component="section" aria-labelledby="charts-title" sx={{ mt: 7 }}>
+    <Container component="section" id="results-charts" aria-labelledby="charts-title" sx={{ mt: 7, scrollMarginTop: { xs: 88, md: 136 } }}>
       <SectionHeading
         eyebrow="Charts"
         title={<span id="charts-title">Growth, returns and loan balance to exit</span>}

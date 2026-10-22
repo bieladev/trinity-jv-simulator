@@ -182,7 +182,7 @@ export const motionGlobalStyles = (shadows) => {
     '@keyframes motionDrawY': { from: { transform: 'scaleY(0)' }, to: { transform: 'scaleY(1)' } },
     '@keyframes motionUncover': { from: { transform: 'scaleX(1)' }, to: { transform: 'scaleX(0)' } },
 
-    // Screen change (Overview → Assumptions → Summary/Results). Fill mode
+    // Screen change (Overview → Assumptions → Results). Fill mode
     // "backwards" so no transform lingers after the animation.
     '.motion-screen': { animation: `motionScreenIn ${d.screen}ms ${e.out} backwards` },
     // Above-the-fold rise: pure CSS, opacity 1 on first paint.
