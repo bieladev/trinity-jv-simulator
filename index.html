@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f5fa8'/%3E%3Ctext x='16' y='22' font-family='Arial,sans-serif' font-size='16' font-weight='700' fill='white' text-anchor='middle'%3ETJV%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Trinity JV Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Paint the right background before React mounts (no light flash in dark mode).
+      (function () {
+        var mode = null;
+        try { mode = localStorage.getItem('lotline-color-mode'); } catch (e) {}
+        if (mode !== 'light' && mode !== 'dark') {
+          try { mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { mode = 'light'; }
+        }
+        document.documentElement.dataset.theme = mode;
+        document.documentElement.style.backgroundColor = mode === 'dark' ? '#0b0d11' : '#f3f7fc';
+      })();
+    </script>
+  
+  <!-- Biela: broken-image fallback — replaces missing local-path images with a neutral placeholder -->
+  <script data-biela-img-guard="1">
+    (function () {
+      var PLACEHOLDER = 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=800';
+      document.addEventListener('error', function (e) {
+        var t = e.target;
+        if (!(t instanceof HTMLImageElement)) return;
+        var src = t.getAttribute('src') || '';
+        // Only intercept local/relative paths — never loop on the placeholder itself
+        if (!src || src.startsWith('https://') || src.startsWith('data:') || src === PLACEHOLDER) return;
+        t.src = PLACEHOLDER;
+        t.style.objectFit = 'cover';
+        t.style.filter = 'grayscale(0.5) opacity(0.7)';
+      }, true);
+    })();
+  </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "trinity-jv-simulator",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:host": "vite --host",
+    "test": "vitest run",
+    "build:single": "vite build --config vite.single.config.js && mv share/index.html share/trinity-jv-simulator.html"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.3",
+    "@mui/material": "^5.14.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.8.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.3",
+    "vite": "^4.4.5",
+    "vite-plugin-singlefile": "^0.13.5",
+    "vitest": "^0.34.6"
+  }
+}

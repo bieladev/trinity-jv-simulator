@@ -1,0 +1,13 @@
+
+# Biela Enterprise — per-worktree ports (managed by platform, do not edit).
+# ports.mjs/.d.mts ARE tracked: vite.config imports them statically and a
+# clone with no manifest still has to build.
+/.biela/*
+!/.biela/ports.mjs
+!/.biela/ports.d.mts
+
+node_modules/
+dist/
+share/
+.claude/
+Pasted text*
