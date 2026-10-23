@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline, Box, Container, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
+import { CssBaseline, Box, Container, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Link } from '@mui/material';
+import { DownloadOutlined as DownloadOutlinedIcon } from '@mui/icons-material';
 import { createAppTheme } from './theme';
 import { getInitialColorMode, getStoredColorMode, storeColorMode } from './utils/colorMode';
 import HeaderNavigation from './components/HeaderNavigation';
@@ -18,6 +19,12 @@ import { useReducedMotion, scrollToId, motion } from './utils/motion';
 // Thin wrapper that only forwards `theme`. MUI's ThemeProvider rejects any
 // extra prop in development, and the preview tooling tags JSX elements with a
 // data attribute, so the provider itself is created without JSX.
+// The hosted site also serves the standalone single-file build (added by the
+// Dockerfile). Hide the link in local development, where that file is not
+// built, and inside the standalone file itself.
+const OFFLINE_DOWNLOAD_AVAILABLE =
+  !import.meta.env.DEV && typeof window !== 'undefined' && window.location.protocol !== 'file:';
+
 function AppThemeProvider({ theme, children }) {
   return React.createElement(ThemeProvider, { theme }, children);
 }
@@ -309,6 +316,19 @@ function App() {
             <Typography variant="caption" component="p" color="text.secondary" sx={{ maxWidth: 760 }}>
               Illustrative model only. Projections depend entirely on the assumptions entered and are not financial advice; actual results may vary significantly.
             </Typography>
+            {OFFLINE_DOWNLOAD_AVAILABLE && (
+              <Link
+                href="trinity-jv-simulator.html"
+                download="trinity-jv-simulator.html"
+                variant="body2"
+                underline="hover"
+                data-testid="offline-download-link"
+                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, mt: 1.5, minHeight: 44 }}
+              >
+                <DownloadOutlinedIcon sx={{ fontSize: 18 }} aria-hidden />
+                Download offline version (one HTML file, opens in any browser)
+              </Link>
+            )}
           </Container>
         </Box>
       </Box>

@@ -13,7 +13,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
 COPY . .
-RUN npm run build
+# Also build the standalone single-file version and serve it next to the site.
+RUN npm run build && npm run build:single && cp download/trinity-jv-simulator.html dist/
 
 # ---- serve ----
 FROM nginx:alpine AS runner
@@ -23,6 +24,7 @@ RUN printf 'server {\n\
   listen 80;\n\
   root /usr/share/nginx/html;\n\
   location / { try_files $uri $uri/ /index.html; }\n\
+  location = /trinity-jv-simulator.html { add_header Content-Disposition attachment; }\n\
 }\n' > /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
