@@ -16,3 +16,4 @@ build/
 .next/
 .env
 .env.local
+download/
